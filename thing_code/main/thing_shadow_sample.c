@@ -76,7 +76,7 @@ static const char *TAG = "shadow";
 #define ROOMTEMPERATURE_LOWERLIMIT 25.0f
 #define STARTING_ROOMTEMPERATURE ROOMTEMPERATURE_LOWERLIMIT
 
-#define MAX_LENGTH_OF_UPDATE_JSON_BUFFER 400
+#define MAX_LENGTH_OF_UPDATE_JSON_BUFFER 200
 
 /* The examples use simple WiFi configuration that you can set via
    'make menuconfig'.
@@ -136,21 +136,21 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
     return ESP_OK;
 }
 
-static void simulateRoomTemperature(float *pRoomTemperature)
-{
-    static float deltaChange;
+// static void simulateRoomTemperature(float *pRoomTemperature)
+// {
+//     static float deltaChange;
 
-    if (*pRoomTemperature >= ROOMTEMPERATURE_UPPERLIMIT)
-    {
-        deltaChange = -0.5f;
-    }
-    else if (*pRoomTemperature <= ROOMTEMPERATURE_LOWERLIMIT)
-    {
-        deltaChange = 0.5f;
-    }
+//     if (*pRoomTemperature >= ROOMTEMPERATURE_UPPERLIMIT)
+//     {
+//         deltaChange = -0.5f;
+//     }
+//     else if (*pRoomTemperature <= ROOMTEMPERATURE_LOWERLIMIT)
+//     {
+//         deltaChange = 0.5f;
+//     }
 
-    *pRoomTemperature += deltaChange;
-}
+//     *pRoomTemperature += deltaChange;
+// }
 
 static bool shadowUpdateInProgress;
 
@@ -178,16 +178,16 @@ void ShadowUpdateStatusCallback(const char *pThingName, ShadowActions_t action, 
     }
 }
 
-void windowActuate_Callback(const char *pJsonString, uint32_t JsonStringDataLen, jsonStruct_t *pContext)
-{
-    IOT_UNUSED(pJsonString);
-    IOT_UNUSED(JsonStringDataLen);
+// void windowActuate_Callback(const char *pJsonString, uint32_t JsonStringDataLen, jsonStruct_t *pContext)
+// {
+//     IOT_UNUSED(pJsonString);
+//     IOT_UNUSED(JsonStringDataLen);
 
-    if (pContext != NULL)
-    {
-        ESP_LOGI(TAG, "Delta - Window state changed to %d", *(bool *)(pContext->pData));
-    }
-}
+//     if (pContext != NULL)
+//     {
+//         ESP_LOGI(TAG, "Delta - Window state changed to %d", *(bool *)(pContext->pData));
+//     }
+// }
 
 void sntp_hostname_Callback(const char *pJsonString, uint32_t JsonStringDataLen, jsonStruct_t *pContext)
 {
@@ -218,19 +218,19 @@ void aws_iot_task(void *param)
     char JsonDocumentBuffer[MAX_LENGTH_OF_UPDATE_JSON_BUFFER];
     size_t sizeOfJsonDocumentBuffer = sizeof(JsonDocumentBuffer) / sizeof(JsonDocumentBuffer[0]);
 
-    bool windowOpen = false;
-    jsonStruct_t windowActuator;
-    windowActuator.cb = windowActuate_Callback;
-    windowActuator.pData = &windowOpen;
-    windowActuator.pKey = "windowOpen";
-    windowActuator.type = SHADOW_JSON_BOOL;
+    // bool windowOpen = false;
+    // jsonStruct_t windowActuator;
+    // windowActuator.cb = windowActuate_Callback;
+    // windowActuator.pData = &windowOpen;
+    // windowActuator.pKey = "windowOpen";
+    // windowActuator.type = SHADOW_JSON_BOOL;
 
-    float temperature = 0.0;
-    jsonStruct_t temperatureHandler;
-    temperatureHandler.cb = NULL;
-    temperatureHandler.pKey = "temperature";
-    temperatureHandler.pData = &temperature;
-    temperatureHandler.type = SHADOW_JSON_FLOAT;
+    // float temperature = 0.0;
+    // jsonStruct_t temperatureHandler;
+    // temperatureHandler.cb = NULL;
+    // temperatureHandler.pKey = "temperature";
+    // temperatureHandler.pData = &temperature;
+    // temperatureHandler.type = SHADOW_JSON_FLOAT;
 
     char sntp_hostname[20] = DEFAULT_SNTP_HOSTNAME;
     jsonStruct_t sntpHandler;
@@ -241,10 +241,10 @@ void aws_iot_task(void *param)
 
     char display[16] = "12345678";
     jsonStruct_t displayHandler;
-    sntpHandler.cb = display_Callback;
-    sntpHandler.pKey = "display";
-    sntpHandler.pData = &display;
-    sntpHandler.type = SHADOW_JSON_STRING;
+    displayHandler.cb = display_Callback;
+    displayHandler.pKey = "display";
+    displayHandler.pData = &display;
+    displayHandler.type = SHADOW_JSON_STRING;
 
     ESP_LOGI(TAG, "AWS IoT SDK Version %d.%d.%d-%s", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
 
@@ -298,11 +298,11 @@ void aws_iot_task(void *param)
         abort();
     }
 
-    rc = aws_iot_shadow_register_delta(&mqttClient, &windowActuator);
-    if (SUCCESS != rc)
-    {
-        ESP_LOGE(TAG, "Shadow Register Window Delta Error");
-    }
+    // rc = aws_iot_shadow_register_delta(&mqttClient, &windowActuator);
+    // if (SUCCESS != rc)
+    // {
+    //     ESP_LOGE(TAG, "Shadow Register Window Delta Error");
+    // }
 
     rc = aws_iot_shadow_register_delta(&mqttClient, &sntpHandler);
     if (SUCCESS != rc)
@@ -316,7 +316,7 @@ void aws_iot_task(void *param)
         ESP_LOGE(TAG, "Shadow Register Display Delta Error");
     }
 
-    temperature = STARTING_ROOMTEMPERATURE;
+    //temperature = STARTING_ROOMTEMPERATURE;
 
     // loop and publish a change in temperature
     while (NETWORK_ATTEMPTING_RECONNECT == rc || NETWORK_RECONNECTED == rc || SUCCESS == rc)
@@ -330,17 +330,18 @@ void aws_iot_task(void *param)
             continue;
         }
         ESP_LOGI(TAG, "=======================================================================================");
-        ESP_LOGI(TAG, "On Device: window state %s", windowOpen ? "true" : "false");
+        //ESP_LOGI(TAG, "On Device: window state %s", windowOpen ? "true" : "false");
         ESP_LOGI(TAG, "On Device: sntp hostname %s", sntp_hostname);
         ESP_LOGI(TAG, "On Device: display value %s", display);
 
-        simulateRoomTemperature(&temperature);
+        //simulateRoomTemperature(&temperature);
 
         rc = aws_iot_shadow_init_json_document(JsonDocumentBuffer, sizeOfJsonDocumentBuffer);
         if (SUCCESS == rc)
         {
-            rc = aws_iot_shadow_add_reported(JsonDocumentBuffer, sizeOfJsonDocumentBuffer, 4, &temperatureHandler,
-                                             &windowActuator, &sntpHandler, &displayHandler);
+            // rc = aws_iot_shadow_add_reported(JsonDocumentBuffer, sizeOfJsonDocumentBuffer, 4, &temperatureHandler,
+            //                                  &windowActuator, &sntpHandler, &displayHandler);
+            rc = aws_iot_shadow_add_reported(JsonDocumentBuffer, sizeOfJsonDocumentBuffer, 2, &sntpHandler, &displayHandler);
             if (SUCCESS == rc)
             {
                 rc = aws_iot_finalize_json_document(JsonDocumentBuffer, sizeOfJsonDocumentBuffer);
