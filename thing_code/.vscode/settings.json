@@ -1,0 +1,28 @@
+{
+    "terminal.integrated.env.windows": {
+        "PATH": "C:\\Users\\david\\.platformio\\penv\\Scripts;C:\\Users\\david\\.platformio\\penv;C:\\Users\\david\\.platformio\\python27\\;C:\\Users\\david\\.platformio\\python27\\Scripts;C:\\Program Files (x86)\\Razer Chroma SDK\\bin;C:\\Program Files\\Razer Chroma SDK\\bin;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\WINDOWS\\system32\\config\\systemprofile\\AppData\\Local\\Microsoft\\WindowsApps;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\Program Files\\TortoiseGit\\bin;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Git\\mingw64\\bin;C:\\Program Files\\Git\\usr\\bin;C:\\Program Files\\LLVM\\bin;C:\\Program Files\\IDM Computer Solutions\\UltraEdit;C:\\Program Files\\IDM Computer Solutions\\UltraCompare;C:\\Program Files\\Amazon\\AWSCLI\\;C:\\TDM-GCC-64\\bin;C:\\Users\\david\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\david\\AppData\\Local\\atom\\bin;C:\\Users\\david\\Google Drive\\Projects\\mongoose;;C:\\Program Files\\Microsoft VS Code\\bin;C:\\Users\\david\\.platformio\\python27\\;C:\\Users\\david\\.platformio\\python27\\Scripts;C:\\Program Files (x86)\\Razer Chroma SDK\\bin;C:\\Program Files\\Razer Chroma SDK\\bin;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\WINDOWS\\system32\\config\\systemprofile\\AppData\\Local\\Microsoft\\WindowsApps;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\Program Files\\TortoiseGit\\bin;C:\\Program Files\\Git\\cmd;C:\\Program Files\\Git\\mingw64\\bin;C:\\Program Files\\Git\\usr\\bin;C:\\Program Files\\LLVM\\bin;C:\\Program Files\\IDM Computer Solutions\\UltraEdit;C:\\Program Files\\IDM Computer Solutions\\UltraCompare;C:\\Program Files\\Amazon\\AWSCLI\\;C:\\TDM-GCC-64\\bin;C:\\Users\\david\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\david\\AppData\\Local\\atom\\bin;C:\\Users\\david\\Google Drive\\Projects\\mongoose;;C:\\Program Files\\Microsoft VS Code\\bin",
+        "PLATFORMIO_CALLER": "vscode"
+    },
+    "C_Cpp.intelliSenseEngine": "Tag Parser",
+    "files.autoSave": "off",
+    "C_Cpp.clang_format_style": "Visual Studio",
+	"[cpp]": {
+        "editor.quickSuggestions": true,
+        "editor.formatOnSave": true
+	},
+	"[c]": {
+        "editor.quickSuggestions": true,
+        "editor.formatOnSave": true
+    },
+    "files.trimTrailingWhitespace": true,
+	"files.associations": {
+		"thread": "cpp",
+		"array": "cpp",
+		"initializer_list": "cpp",
+		"utility": "cpp",
+		"system_error": "cpp",
+		"functional": "cpp",
+		"type_traits": "cpp",
+		"tuple": "cpp"
+	}
+}
