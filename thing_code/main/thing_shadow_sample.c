@@ -26,6 +26,8 @@
 #include <unistd.h>
 #include <limits.h>
 #include <string.h>
+#include <time.h>
+#include <sys/time.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -34,8 +36,8 @@
 #include "esp_wifi.h"
 #include "esp_event_loop.h"
 #include "esp_log.h"
-#include "esp_vfs_fat.h"
-#include "driver/sdmmc_host.h"
+#include "esp_attr.h"
+#include "esp_sleep.h"
 
 #include "nvs.h"
 #include "nvs_flash.h"
@@ -45,6 +47,9 @@
 #include "aws_iot_version.h"
 #include "aws_iot_mqtt_client_interface.h"
 #include "aws_iot_shadow_interface.h"
+
+#include "lwip/err.h"
+#include "apps/sntp/sntp.h"
 
 /*!
  * The goal of this sample application is to demonstrate the capabilities of shadow.
@@ -68,24 +73,25 @@
  }
  */
 
-static const char *TAG = "shadow";
-
-#define DEFAULT_SNTP_HOSTNAME "pool.ntp.org";
-
-#define ROOMTEMPERATURE_UPPERLIMIT 32.0f
-#define ROOMTEMPERATURE_LOWERLIMIT 25.0f
-#define STARTING_ROOMTEMPERATURE ROOMTEMPERATURE_LOWERLIMIT
-
-#define MAX_LENGTH_OF_UPDATE_JSON_BUFFER 200
-
 /* The examples use simple WiFi configuration that you can set via
    'make menuconfig'.
 
    If you'd rather not, just change the below entries to strings with
-   the config you want - ie #define EXAMPLE_WIFI_SSID "mywifissid"
+   the config you want - ie #define WIFI_SSID "mywifissid"
 */
-#define EXAMPLE_WIFI_SSID CONFIG_WIFI_SSID
-#define EXAMPLE_WIFI_PASS CONFIG_WIFI_PASSWORD
+#define WIFI_SSID "Home"
+#define WIFI_PASS "davidchristianfleig"
+
+//#define CONFIG_AWS_IOT_MQTT_HOST "a1p7fx1rx0lfgm.iot.us-east-1.amazonaws.com"
+#define CONFIG_AWS_CLIENT_ID "RedClockinator"
+#define CONFIG_AWS_THING_NAME "RedClockinator"
+
+#define DEFAULT_SNTP_HOSTNAME "pool.ntp.org"
+#define DEFAULT_TIMEZONE "EST5EDT,M3.2.0/2,M11.1.0"
+#define SHADOW_UPDATE_DELAY 60000 // In millis
+
+static const char *TAG = "shadow";
+#define MAX_LENGTH_OF_UPDATE_JSON_BUFFER 200
 
 /* FreeRTOS event group to signal when we are connected & ready to make a request */
 static EventGroupHandle_t wifi_event_group;
@@ -114,6 +120,60 @@ extern const uint8_t certificate_pem_crt_end[] asm("_binary_certificate_pem_crt_
 extern const uint8_t private_pem_key_start[] asm("_binary_private_pem_key_start");
 extern const uint8_t private_pem_key_end[] asm("_binary_private_pem_key_end");
 
+char _sntp_timezone[30] = DEFAULT_TIMEZONE;
+char _sntp_hostname[20] = DEFAULT_SNTP_HOSTNAME;
+
+static void restart_sntp()
+{
+    if (strlen(_sntp_hostname) == 0)
+    {
+        ESP_LOGI(TAG, "Was going to restart SNTP but no server name was set.");
+        sntp_stop();
+        return;
+    }
+    if (strlen(_sntp_timezone) == 0)
+    {
+        ESP_LOGI(TAG, "Was going to restart SNTP but no timezone was set.");
+        sntp_stop();
+        return;
+    }
+
+    if (sntp_enabled())
+    {
+        ESP_LOGI(TAG, "Stopping SNTP");
+        sntp_stop();
+    }
+
+    /* Wait for WiFI to show as connected */
+    xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT,
+                        false, true, portMAX_DELAY);
+
+    ESP_LOGI(TAG, "Initializing SNTP");
+    sntp_setoperatingmode(SNTP_OPMODE_POLL);
+    sntp_setservername(0, _sntp_hostname);
+    sntp_init();
+
+    setenv("TZ", _sntp_timezone, 1);
+    tzset();
+
+    time_t now;
+    struct tm timeinfo;
+    time(&now);
+    localtime_r(&now, &timeinfo);
+    // Is time set? If not, tm_year will be (1970 - 1900).
+    if (timeinfo.tm_year < (2016 - 1900))
+    {
+        ESP_LOGI(TAG, "Time is not set yet. Connecting to WiFi and getting time over NTP.");
+        // update 'now' variable with current time
+        time(&now);
+    }
+
+    char strftime_buf[64];
+    localtime_r(&now, &timeinfo);
+    strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+    ESP_LOGI(TAG, "The current date/time in New York is: %s", strftime_buf);
+}
+
 static esp_err_t event_handler(void *ctx, system_event_t *event)
 {
     switch (event->event_id)
@@ -135,22 +195,6 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
     }
     return ESP_OK;
 }
-
-// static void simulateRoomTemperature(float *pRoomTemperature)
-// {
-//     static float deltaChange;
-
-//     if (*pRoomTemperature >= ROOMTEMPERATURE_UPPERLIMIT)
-//     {
-//         deltaChange = -0.5f;
-//     }
-//     else if (*pRoomTemperature <= ROOMTEMPERATURE_LOWERLIMIT)
-//     {
-//         deltaChange = 0.5f;
-//     }
-
-//     *pRoomTemperature += deltaChange;
-// }
 
 static bool shadowUpdateInProgress;
 
@@ -178,17 +222,6 @@ void ShadowUpdateStatusCallback(const char *pThingName, ShadowActions_t action, 
     }
 }
 
-// void windowActuate_Callback(const char *pJsonString, uint32_t JsonStringDataLen, jsonStruct_t *pContext)
-// {
-//     IOT_UNUSED(pJsonString);
-//     IOT_UNUSED(JsonStringDataLen);
-
-//     if (pContext != NULL)
-//     {
-//         ESP_LOGI(TAG, "Delta - Window state changed to %d", *(bool *)(pContext->pData));
-//     }
-// }
-
 void sntp_hostname_Callback(const char *pJsonString, uint32_t JsonStringDataLen, jsonStruct_t *pContext)
 {
     IOT_UNUSED(pJsonString);
@@ -196,7 +229,36 @@ void sntp_hostname_Callback(const char *pJsonString, uint32_t JsonStringDataLen,
 
     if (pContext != NULL)
     {
-        ESP_LOGI(TAG, "Delta - SNTP hostname state changed to %d", *(bool *)(pContext->pData));
+        ESP_LOGI(TAG, "Delta - SNTP hostname state changed to %s", (char *)(pContext->pData));
+        if (strlen((char *)(pContext->pData)) > 0)
+        {
+            strcpy(_sntp_hostname, (char *)(pContext->pData));
+            restart_sntp();
+        }
+        else
+        {
+            sntp_stop();
+        }
+    }
+}
+
+void timezone_Callback(const char *pJsonString, uint32_t JsonStringDataLen, jsonStruct_t *pContext)
+{
+    IOT_UNUSED(pJsonString);
+    IOT_UNUSED(JsonStringDataLen);
+
+    if (pContext != NULL)
+    {
+        ESP_LOGI(TAG, "Delta - Timezone changed to %s", (char *)(pContext->pData));
+        if (strlen((char *)(pContext->pData)) > 0)
+        {
+            strcpy(_sntp_timezone, (char *)(pContext->pData));
+            restart_sntp();
+        }
+        else
+        {
+            sntp_stop();
+        }
     }
 }
 
@@ -207,7 +269,7 @@ void display_Callback(const char *pJsonString, uint32_t JsonStringDataLen, jsonS
 
     if (pContext != NULL)
     {
-        ESP_LOGI(TAG, "Delta - Display state changed to %d", *(bool *)(pContext->pData));
+        ESP_LOGI(TAG, "Delta - Display state changed to %s", (char *)(pContext->pData));
     }
 }
 
@@ -218,25 +280,10 @@ void aws_iot_task(void *param)
     char JsonDocumentBuffer[MAX_LENGTH_OF_UPDATE_JSON_BUFFER];
     size_t sizeOfJsonDocumentBuffer = sizeof(JsonDocumentBuffer) / sizeof(JsonDocumentBuffer[0]);
 
-    // bool windowOpen = false;
-    // jsonStruct_t windowActuator;
-    // windowActuator.cb = windowActuate_Callback;
-    // windowActuator.pData = &windowOpen;
-    // windowActuator.pKey = "windowOpen";
-    // windowActuator.type = SHADOW_JSON_BOOL;
-
-    // float temperature = 0.0;
-    // jsonStruct_t temperatureHandler;
-    // temperatureHandler.cb = NULL;
-    // temperatureHandler.pKey = "temperature";
-    // temperatureHandler.pData = &temperature;
-    // temperatureHandler.type = SHADOW_JSON_FLOAT;
-
-    char sntp_hostname[20] = DEFAULT_SNTP_HOSTNAME;
     jsonStruct_t sntpHandler;
     sntpHandler.cb = sntp_hostname_Callback;
     sntpHandler.pKey = "sntpHostname";
-    sntpHandler.pData = &sntp_hostname;
+    sntpHandler.pData = &_sntp_hostname;
     sntpHandler.type = SHADOW_JSON_STRING;
 
     char display[16] = "12345678";
@@ -245,6 +292,12 @@ void aws_iot_task(void *param)
     displayHandler.pKey = "display";
     displayHandler.pData = &display;
     displayHandler.type = SHADOW_JSON_STRING;
+
+    jsonStruct_t timezoneHandler;
+    timezoneHandler.cb = timezone_Callback;
+    timezoneHandler.pKey = "timezone";
+    timezoneHandler.pData = &_sntp_timezone;
+    timezoneHandler.type = SHADOW_JSON_STRING;
 
     ESP_LOGI(TAG, "AWS IoT SDK Version %d.%d.%d-%s", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
 
@@ -274,9 +327,9 @@ void aws_iot_task(void *param)
     }
 
     ShadowConnectParameters_t scp = ShadowConnectParametersDefault;
-    scp.pMyThingName = CONFIG_AWS_EXAMPLE_THING_NAME;
-    scp.pMqttClientId = CONFIG_AWS_EXAMPLE_CLIENT_ID;
-    scp.mqttClientIdLen = (uint16_t)strlen(CONFIG_AWS_EXAMPLE_CLIENT_ID);
+    scp.pMyThingName = CONFIG_AWS_THING_NAME;
+    scp.pMqttClientId = CONFIG_AWS_CLIENT_ID;
+    scp.mqttClientIdLen = (uint16_t)strlen(CONFIG_AWS_CLIENT_ID);
 
     ESP_LOGI(TAG, "Shadow Connect");
     rc = aws_iot_shadow_connect(&mqttClient, &scp);
@@ -298,11 +351,11 @@ void aws_iot_task(void *param)
         abort();
     }
 
-    // rc = aws_iot_shadow_register_delta(&mqttClient, &windowActuator);
-    // if (SUCCESS != rc)
-    // {
-    //     ESP_LOGE(TAG, "Shadow Register Window Delta Error");
-    // }
+    rc = aws_iot_shadow_register_delta(&mqttClient, &timezoneHandler);
+    if (SUCCESS != rc)
+    {
+        ESP_LOGE(TAG, "Shadow Register Timezone Delta Error");
+    }
 
     rc = aws_iot_shadow_register_delta(&mqttClient, &sntpHandler);
     if (SUCCESS != rc)
@@ -316,8 +369,6 @@ void aws_iot_task(void *param)
         ESP_LOGE(TAG, "Shadow Register Display Delta Error");
     }
 
-    //temperature = STARTING_ROOMTEMPERATURE;
-
     // loop and publish a change in temperature
     while (NETWORK_ATTEMPTING_RECONNECT == rc || NETWORK_RECONNECTED == rc || SUCCESS == rc)
     {
@@ -330,25 +381,21 @@ void aws_iot_task(void *param)
             continue;
         }
         ESP_LOGI(TAG, "=======================================================================================");
-        //ESP_LOGI(TAG, "On Device: window state %s", windowOpen ? "true" : "false");
-        ESP_LOGI(TAG, "On Device: sntp hostname %s", sntp_hostname);
+        ESP_LOGI(TAG, "On Device: timezone value %s", _sntp_timezone);
+        ESP_LOGI(TAG, "On Device: sntp hostname value %s", _sntp_hostname);
         ESP_LOGI(TAG, "On Device: display value %s", display);
-
-        //simulateRoomTemperature(&temperature);
 
         rc = aws_iot_shadow_init_json_document(JsonDocumentBuffer, sizeOfJsonDocumentBuffer);
         if (SUCCESS == rc)
         {
-            // rc = aws_iot_shadow_add_reported(JsonDocumentBuffer, sizeOfJsonDocumentBuffer, 4, &temperatureHandler,
-            //                                  &windowActuator, &sntpHandler, &displayHandler);
-            rc = aws_iot_shadow_add_reported(JsonDocumentBuffer, sizeOfJsonDocumentBuffer, 2, &sntpHandler, &displayHandler);
+            rc = aws_iot_shadow_add_reported(JsonDocumentBuffer, sizeOfJsonDocumentBuffer, 3, &sntpHandler, &timezoneHandler, &displayHandler);
             if (SUCCESS == rc)
             {
                 rc = aws_iot_finalize_json_document(JsonDocumentBuffer, sizeOfJsonDocumentBuffer);
                 if (SUCCESS == rc)
                 {
                     ESP_LOGI(TAG, "Update Shadow: %s", JsonDocumentBuffer);
-                    rc = aws_iot_shadow_update(&mqttClient, CONFIG_AWS_EXAMPLE_THING_NAME, JsonDocumentBuffer,
+                    rc = aws_iot_shadow_update(&mqttClient, CONFIG_AWS_THING_NAME, JsonDocumentBuffer,
                                                ShadowUpdateStatusCallback, NULL, 4, true);
                     shadowUpdateInProgress = true;
                 }
@@ -357,7 +404,7 @@ void aws_iot_task(void *param)
         ESP_LOGI(TAG, "*****************************************************************************************");
         ESP_LOGI(TAG, "Stack remaining for task '%s' is %d bytes", pcTaskGetTaskName(NULL), uxTaskGetStackHighWaterMark(NULL));
 
-        vTaskDelay(2000 / portTICK_RATE_MS);
+        vTaskDelay(SHADOW_UPDATE_DELAY / portTICK_RATE_MS);
     }
 
     if (SUCCESS != rc)
@@ -386,8 +433,8 @@ static void initialise_wifi(void)
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
     wifi_config_t wifi_config = {
         .sta = {
-            .ssid = EXAMPLE_WIFI_SSID,
-            .password = EXAMPLE_WIFI_PASS,
+            .ssid = WIFI_SSID,
+            .password = WIFI_PASS,
         },
     };
     ESP_LOGI(TAG, "Setting WiFi configuration SSID %s...", wifi_config.sta.ssid);
@@ -409,4 +456,6 @@ void app_main()
     initialise_wifi();
     /* Temporarily pin task to core, due to FPU uncertainty */
     xTaskCreatePinnedToCore(&aws_iot_task, "aws_iot_task", 9216, NULL, 5, NULL, 1);
+
+    restart_sntp();
 }

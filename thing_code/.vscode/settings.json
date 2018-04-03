@@ -15,14 +15,15 @@
         "editor.formatOnSave": true
     },
     "files.trimTrailingWhitespace": true,
-	"files.associations": {
-		"thread": "cpp",
-		"array": "cpp",
-		"initializer_list": "cpp",
-		"utility": "cpp",
-		"system_error": "cpp",
-		"functional": "cpp",
-		"type_traits": "cpp",
-		"tuple": "cpp"
-	}
+    "files.associations": {
+        "thread": "cpp",
+        "array": "cpp",
+        "initializer_list": "cpp",
+        "utility": "cpp",
+        "system_error": "cpp",
+        "functional": "cpp",
+        "type_traits": "cpp",
+        "tuple": "cpp",
+        "sntp.h": "c"
+    }
 }

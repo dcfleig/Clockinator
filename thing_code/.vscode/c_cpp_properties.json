@@ -4,6 +4,7 @@
             "name": "Win32",
             "includePath": [
                 "c:/Users/david/GitHub/Clockinator/thing_code/main",
+                "c:/Users/david/GitHub/Clockinator/thing_code/components",
                 "C:/Users/david/GitHub/esp-idf/components/bt/bluedroid/utils/include",
                 "C:/Users/david/GitHub/esp-idf/components/bt/bluedroid/stack/smp/include",
                 "C:/Users/david/GitHub/esp-idf/components/bt/bluedroid/stack/sdp/include",
@@ -105,6 +106,7 @@
                 "databaseFilename": "${workspaceRoot}/.vscode/.browse.c_cpp.db",
                 "path": [
                     "c:/Users/david/GitHub/Clockinator/thing_code/main",
+                    "c:/Users/david/GitHub/Clockinator/thing_code/components",
                     "C:/Users/david/GitHub/esp-idf/components/bt/bluedroid/utils/include",
                     "C:/Users/david/GitHub/esp-idf/components/bt/bluedroid/stack/smp/include",
                     "C:/Users/david/GitHub/esp-idf/components/bt/bluedroid/stack/sdp/include",
