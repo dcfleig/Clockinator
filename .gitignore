@@ -61,5 +61,9 @@ thing_code/.vscode/*
 !.vscode/launch.json
 !.vscode/extensions.json
 
-thing_code/build/*
-thing_code/main/certs/*
+certs
+build
+/thing_code/.vscode/*.DB
+/thing_code/main/certs/*.key
+/thing_code/main/certs/*.pem
+/thing_code/main/certs/*.crt
