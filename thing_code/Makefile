@@ -3,7 +3,7 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := aws_iot_thing_shadow
-export IDF_PATH=C:/msys64/home/david/Github/esp-idf
+PROJECT_NAME := thing_code
+IDF_PATH=/c/Users/david/Github/esp-idf
 include $(IDF_PATH)/make/project.mk
 
