@@ -64,14 +64,18 @@ void tm_init()
     xEventGroupSetBits(app_event_group, SNTP_CONNECTED_BIT);
 }
 
-void tm_setNTPServer(char *ntpServer)
+const char *tm_getNTPServer() { return _sntp_hostname; }
+
+void tm_setNTPServer(const char *ntpServer)
 {
     strcpy(_sntp_hostname, ntpServer);
     sntp_stop();
     tm_init();
 }
 
-void tm_setTimezone(char *timeZone)
+const char *tm_getTimezone() { return _sntp_timezone; }
+
+void tm_setTimezone(const char *timeZone)
 {
     strcpy(_sntp_timezone, timeZone);
     sntp_stop();
@@ -102,4 +106,15 @@ void tm_getLocalDateText(const char *format, char *buffer)
 {
     struct tm localTime = tm_getLocalTime();
     sprintf(buffer, format, localTime.tm_mon + 1, localTime.tm_mday);
+}
+
+char *tm_getLocalDateTimeText()
+{
+    struct tm now = tm_getLocalTime();
+    char *currentTimeArray = asctime(&now);
+    int currentArrayLength = strlen(currentTimeArray) - 1; // going to remove \n
+
+    currentTimeArray[currentArrayLength] = '\0'; // Overwrite the \n with \0
+
+    return currentTimeArray;
 }

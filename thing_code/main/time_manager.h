@@ -22,11 +22,17 @@
 #include "apps/sntp/sntp.h"
 
 void tm_init();
-void tm_setNTPServer(char *ntpServer);
-void tm_setTimezone(char *timeZone);
+
+char *tm_getNTPServer();
+void tm_setNTPServer(const char *ntpServer);
+
+char *tm_getTimezone();
+void tm_setTimezone(const char *timeZone);
 
 struct tm tm_getLocalTime();
+
 void tm_getLocalTimeText(const char *format, char *buffer);
 void tm_getLocalDateText(const char *format, char *buffer);
+char *tm_getLocalDateTimeText();
 
 #endif

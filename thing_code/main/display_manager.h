@@ -17,11 +17,10 @@
 #include "driver/gpio.h"
 #include "esp_log.h"
 
-enum dm_BANK_SELECT
-{
-    LEFT,
+typedef enum {
+    LEFT = 0,
     RIGHT
-};
+} dm_BANK_SELECT;
 
 char *
 dm_getLeftBank();
@@ -36,6 +35,7 @@ void dm_setBrightness(uint8_t brightness);
 void dm_flash();
 
 void dm_clear();
+void dm_clear_bank(dm_BANK_SELECT bank);
 void dm_init();
 
 void _dm_spiInit();

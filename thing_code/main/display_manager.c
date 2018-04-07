@@ -78,7 +78,7 @@ char *dm_getLeftBank() { return _leftBankChars; };
 void dm_setLeftBank(const char *leftBank)
 {
     strcpy(_leftBankChars, leftBank);
-    ESP_LOGI(TAG, "Displaying %s on the left back.", _leftBankChars);
+    ESP_LOGI(TAG, "Displaying '%s' on the left back.", _leftBankChars);
     _dm_display(_leftBankChars, 1);
 };
 
@@ -86,7 +86,7 @@ char *dm_getRightBank() { return _rightBankChars; };
 void dm_setRightBank(const char *rightBank)
 {
     strcpy(_rightBankChars, rightBank);
-    ESP_LOGI(TAG, "Displaying %s on the right back.", _rightBankChars);
+    ESP_LOGI(TAG, "Displaying '%s' on the right back.", _rightBankChars);
     _dm_display(_rightBankChars, 5);
 };
 
@@ -101,13 +101,19 @@ void dm_setBrightness(uint8_t brightness)
     _dm_spiTransfer(OP_INTENSITY, _brightness);
 };
 
-void dm_flash();
+void dm_flash(){};
 
 void dm_clear()
 {
     ESP_LOGI(TAG, "Clearing the entire display");
     _dm_display("        ", 1);
 };
+
+void dm_clear_bank(dm_BANK_SELECT bank)
+{
+    ESP_LOGI(TAG, "Clearing the %s bank display", bank == LEFT ? "LEFT" : "RIGHT");
+    _dm_display("    ", 1 + (bank * 4));
+}
 
 void dm_init()
 {

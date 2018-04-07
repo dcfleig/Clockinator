@@ -17,7 +17,12 @@
 #include "display_manager.h"
 #include "time_manager.h"
 
-void time_task(void *param);
-void date_task(void *param);
+#define CLOCK_TASKS_STACK_DEPTH 3000
+#define CLOCK_TASKS_PRIORITY 3
+
+void ct_start_time_task(dm_BANK_SELECT bank);
+void ct_start_date_task(dm_BANK_SELECT bank);
+
+void ct_stop_task(dm_BANK_SELECT bank);
 
 #endif

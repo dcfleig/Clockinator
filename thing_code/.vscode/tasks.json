@@ -18,7 +18,6 @@
             "label": "esp build all",
             "command": "C:/msys64/usr/bin/bash.exe -c make -j4 -V1 all",
             "type": "shell",
-            "group": "build",
             "problemMatcher": {
                 "owner": "cpp",
                 "fileLocation": "absolute",
@@ -54,7 +53,6 @@
             "label": "esp app-clean",
             "command": "C:/msys64/usr/bin/bash.exe -c make app-clean",
             "type": "shell",
-            "group": "build",
             "problemMatcher": [
                 "$gcc"
             ]
@@ -63,7 +61,6 @@
             "label": "esp clean",
             "command": "C:/msys64/usr/bin/bash.exe -c make clean",
             "type": "shell",
-            "group": "build",
             "problemMatcher": [
                 "$gcc"
             ]
@@ -72,28 +69,24 @@
             "label": "esp monitor",
             "command": "C:/msys64/usr/bin/bash.exe -c python C:/Users/david/GitHub/esp-idf/tools/idf_monitor.py --port COM15 --baud 115200 build/esp32-code.elf",
             "type": "shell",
-            "group": "build",
             "problemMatcher": []
         },
         {
             "label": "esp flash",
             "command": "C:/msys64/usr/bin/bash.exe -c make flash",
             "type": "shell",
-            "group": "build",
             "problemMatcher": []
         },
         {
             "label": "esp app-flash",
             "command": "C:/msys64/usr/bin/bash.exe -c make app-flash",
             "type": "shell",
-            "group": "build",
             "problemMatcher": []
         },
         {
             "label": "esp menuconfig",
             "command": "C:/msys64/usr/bin/bash.exe -c make menuconfig",
             "type": "shell",
-            "group": "build",
             "problemMatcher": []
         }
     ]
