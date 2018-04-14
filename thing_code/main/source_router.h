@@ -18,6 +18,7 @@
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
 #include "driver/sdmmc_host.h"
+#include "esp_task_wdt.h"
 
 #include "nvs.h"
 #include "nvs_flash.h"
@@ -28,13 +29,14 @@
 #include "aws_iot_mqtt_client_interface.h"
 #include "aws_iot_shadow_interface.h"
 
+#include "app_constants.h"
 #include "display_manager.h"
 #include "clock_tasks.h"
 
 typedef struct SourceRouterMessage
 {
     dm_BANK_SELECT bank;
-    const char *data;
+    const char *dataSource;
 } _SourceRouterMessage;
 
 QueueHandle_t source_router_queue;

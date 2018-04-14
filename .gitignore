@@ -67,3 +67,6 @@ build
 /thing_code/main/certs/*.key
 /thing_code/main/certs/*.pem
 /thing_code/main/certs/*.crt
+thing_code/sdkconfig
+thing_code/sdkconfig.defaults
+thing_code/sdkconfig.old

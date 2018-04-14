@@ -16,21 +16,22 @@
 #include "soc/gpio_struct.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
+#include "esp_task_wdt.h"
+
+#include "app_constants.h"
 
 typedef enum {
     LEFT = 0,
     RIGHT
 } dm_BANK_SELECT;
 
-char *
-dm_getLeftBank();
-void dm_setLeftBank(const char *leftBank);
+char *dm_getBankChars(dm_BANK_SELECT bank);
+void dm_setBankChars(dm_BANK_SELECT bank, const char *bankChars);
+char *dm_getBankSource(dm_BANK_SELECT bank);
+void dm_setBankSource(dm_BANK_SELECT bank, const char *bankSource);
 
-char *dm_getRightBank();
-void dm_setRightBank(const char *leftBank);
-
-uint8_t dm_getBrightness();
-void dm_setBrightness(uint8_t brightness);
+int8_t dm_getBrightness();
+void dm_setBrightness(const int8_t brightness);
 
 void dm_flash();
 
@@ -41,6 +42,9 @@ void dm_init();
 void _dm_spiInit();
 void _dm_spiTransfer(volatile uint8_t opcode, volatile uint8_t data);
 void _dm_setChar(int digit, const char value, bool dp);
-void _dm_display(const char *message, int startPosition);
+void dm_display(const char *message, int startPosition);
+
+void dm_led_test();
+void dm_set_led(int digit, int ledArray);
 
 #endif

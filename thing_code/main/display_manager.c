@@ -15,6 +15,7 @@
 #include "esp_log.h"
 
 #include "display_manager.h"
+#include "app_constants.h"
 
 #define SPI_MOSI_PIN 21
 #define SPI_CLK_PIN 16
@@ -42,8 +43,8 @@ uint8_t maxDevices = 1;
 #define OP_SHUTDOWN 0x0c
 #define OP_DISPLAYTEST 0x0f
 
-char _leftBankChars[9] = "";
-char _rightBankChars[9] = "";
+char _bankCharsArray[2][(DISPLAY_LENGTH / 2) + 1];
+char _bankSourceArray[2][MAX_TOPIC_NAME_LENGTH];
 uint8_t _brightness = 10;
 
 /*
@@ -74,29 +75,30 @@ const static uint8_t charTable[] = {
     0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
     0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000};
 
-char *dm_getLeftBank() { return _leftBankChars; };
-void dm_setLeftBank(const char *leftBank)
+char *dm_getBankChars(dm_BANK_SELECT bank) { return &_bankCharsArray[bank][0]; };
+void dm_setBankChars(dm_BANK_SELECT bank, const char *bankChars)
 {
-    strcpy(_leftBankChars, leftBank);
-    ESP_LOGI(TAG, "Displaying '%s' on the left back.", _leftBankChars);
-    _dm_display(_leftBankChars, 1);
+    //strcpy((char *)_bankCharsArray[bank][0], bankChars);
+    ESP_LOGI(TAG, "Displaying '%s' on the %s bank.", (char *)bankChars, bank == LEFT ? "LEFT" : "RIGHT");
+    dm_display(bankChars, bank * 4 + 1);
 };
 
-char *dm_getRightBank() { return _rightBankChars; };
-void dm_setRightBank(const char *rightBank)
+char *dm_getBankSource(dm_BANK_SELECT bank) { return (char *)_bankSourceArray[bank][0]; };
+void dm_setBankSource(dm_BANK_SELECT bank, const char *bankSource)
 {
-    strcpy(_rightBankChars, rightBank);
-    ESP_LOGI(TAG, "Displaying '%s' on the right back.", _rightBankChars);
-    _dm_display(_rightBankChars, 5);
+    //strcpy((char *)_bankSourceArray[bank][0], bankSource);
+    ESP_LOGI(TAG, "Setting %s bank source to '%s'", bank == LEFT ? "LEFT" : "RIGHT", (char *)_bankSourceArray[bank][0]);
+    // *** subscribe here
 };
 
-uint8_t dm_getBrightness() { return _brightness; };
-void dm_setBrightness(uint8_t brightness)
+int8_t dm_getBrightness() { return _brightness; };
+void dm_setBrightness(int8_t brightness)
 {
     _brightness = brightness;
 
     if (_brightness > 15)
-        _brightness = 16;
+        _brightness = 15;
+
     ESP_LOGI(TAG, "Setting brightness to %d", _brightness);
     _dm_spiTransfer(OP_INTENSITY, _brightness);
 };
@@ -106,17 +108,29 @@ void dm_flash(){};
 void dm_clear()
 {
     ESP_LOGI(TAG, "Clearing the entire display");
-    _dm_display("        ", 1);
+    dm_display("        ", 1);
 };
 
 void dm_clear_bank(dm_BANK_SELECT bank)
 {
     ESP_LOGI(TAG, "Clearing the %s bank display", bank == LEFT ? "LEFT" : "RIGHT");
-    _dm_display("    ", 1 + (bank * 4));
+    dm_display("    ", 1 + (bank * 4));
 }
 
 void dm_init()
 {
+    for (int bank = 0; bank < 2; bank++)
+    {
+        for (int c = 0; c < MAX_TOPIC_NAME_LENGTH; c++)
+        {
+            _bankSourceArray[bank][c] = '\0';
+        }
+        for (int c = 0; c < (DISPLAY_LENGTH / 2) + 1; c++)
+        {
+            _bankCharsArray[bank][c] = '\0';
+        }
+    }
+
     _dm_spiInit();
     _dm_spiTransfer(OP_DISPLAYTEST, 0);
     //scanlimit is set to max on startup
@@ -124,9 +138,10 @@ void dm_init()
     //decode is done in source
     _dm_spiTransfer(OP_DECODEMODE, 0);
     _dm_spiTransfer(OP_SHUTDOWN, 1);
+    dm_setBrightness(_brightness);
 };
 
-void _dm_display(const char *message, int startPosition)
+void dm_display(const char *message, int startPosition)
 {
     int currentPosition = startPosition;
     bool setDot = false;
@@ -270,4 +285,30 @@ void _dm_spiInit()
         ESP_LOGE(TAG, "spi_bus_add_device(): rc=%d", errRc);
         abort();
     }
+}
+
+void dm_set_led(int digit, int ledArray)
+{
+    _dm_spiTransfer(digit, ledArray);
+}
+
+void dm_led_test()
+{
+    dm_display("8.8.8.8.8.8.8.8.", 1);
+    // _dm_spiTransfer(OP_DECODEMODE, 0);
+    // vTaskDelay(500 / portTICK_RATE_MS);
+
+    // int val = 0xFF;
+
+    // for (int i = 1; i < 9; i++)
+    // {
+    //     for (int j = 0; j < 9; j++)
+    //     {
+    //         dm_set_led(9 - i, val >> j);
+    //         vTaskDelay(10 / portTICK_RATE_MS);
+    //     }
+    // }
+    // _dm_spiTransfer(OP_DECODEMODE, 1);
+    vTaskDelay(500 / portTICK_RATE_MS);
+    dm_clear();
 }

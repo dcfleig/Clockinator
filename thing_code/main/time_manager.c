@@ -23,6 +23,9 @@ static const char *TAG = "time_manager";
 extern const int IP_CONNECTED_BIT;
 extern const int SNTP_CONNECTED_BIT;
 extern const int SHADOW_CONNECTED_BIT;
+extern const int SHADOW_IN_PROGRESS_BIT;
+extern const int MQTT_SEND_IN_PROGRESS_BIT;
+extern const int SOURCE_ROUTER_STARTED_BIT;
 extern EventGroupHandle_t app_event_group;
 
 char _sntp_hostname[30] = "pool.ntp.org";
@@ -35,11 +38,6 @@ void tm_init()
 
     setenv("TZ", _sntp_timezone, 1);
     tzset();
-
-    ESP_LOGI(TAG, "Waiting for wifi to connect");
-    /* Wait for WiFI to show as connected */
-    xEventGroupWaitBits(app_event_group, IP_CONNECTED_BIT | SHADOW_CONNECTED_BIT,
-                        false, true, portMAX_DELAY);
 
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
     sntp_setservername(0, _sntp_hostname);

@@ -15,43 +15,40 @@
 #include "display_manager.h"
 #include "time_manager.h"
 #include "clock_tasks.h"
+#include "esp_task_wdt.h"
 
 static const char *TAG = "clock_tasks";
 
 extern const int IP_CONNECTED_BIT;
 extern const int SNTP_CONNECTED_BIT;
 extern const int SHADOW_CONNECTED_BIT;
+extern const int SHADOW_IN_PROGRESS_BIT;
+extern const int MQTT_SEND_IN_PROGRESS_BIT;
+extern const int SOURCE_ROUTER_STARTED_BIT;
 extern EventGroupHandle_t app_event_group;
 
 static TaskHandle_t task_handle_array[2];
 
 static void _ct_time_task(dm_BANK_SELECT bank)
 {
-    ESP_LOGI(TAG, "Waiting for wifi to connect");
-    /* Wait for WiFI to show as connected */
-    xEventGroupWaitBits(app_event_group, SNTP_CONNECTED_BIT,
-                        false, true, portMAX_DELAY);
-
     while (1)
     {
         char display[5] = "";
         tm_getLocalTimeText("%2d.%02d", display);
+        dm_setBankChars(bank, display);
 
-        if (bank == RIGHT)
-        {
-            dm_setRightBank(display);
-        }
-        else
-        {
-            dm_setLeftBank(display);
-        }
         ESP_LOGI(TAG, "*** Stack remaining for task '%s' is %d bytes", pcTaskGetTaskName(NULL), uxTaskGetStackHighWaterMark(NULL));
+        CHECK_ERROR_CODE(esp_task_wdt_reset(), ESP_OK); //Comment this line to trigger a TWDT timeout
         vTaskDelay(1000 / portTICK_RATE_MS);
     }
 }
 
 void _ct_start_task(dm_BANK_SELECT bank, TaskFunction_t task, char *taskName)
 {
+    //Subscribe this task to TWDT, then check if it is subscribed
+    CHECK_ERROR_CODE(esp_task_wdt_add(NULL), ESP_OK);
+    CHECK_ERROR_CODE(esp_task_wdt_status(NULL), ESP_OK);
+
     if (task_handle_array[bank] != NULL)
     {
         ct_stop_task(bank);
@@ -70,37 +67,28 @@ void _ct_start_task(dm_BANK_SELECT bank, TaskFunction_t task, char *taskName)
 
 void ct_start_time_task(dm_BANK_SELECT bank)
 {
-    _ct_start_task(bank, &_ct_time_task, "time_task");
+    _ct_start_task(bank, (TaskFunction_t)&_ct_time_task, "time_task");
 }
 
 static void _ct_date_task(dm_BANK_SELECT bank)
 {
-    ESP_LOGI(TAG, "Waiting for wifi to connect");
-    /* Wait for WiFI to show as connected */
-    xEventGroupWaitBits(app_event_group, SNTP_CONNECTED_BIT,
-                        false, true, portMAX_DELAY);
-
+    //Subscribe this task to TWDT, then check if it is subscribed
+    CHECK_ERROR_CODE(esp_task_wdt_add(NULL), ESP_OK);
+    CHECK_ERROR_CODE(esp_task_wdt_status(NULL), ESP_OK);
     while (1)
     {
         char display[5] = "";
         tm_getLocalDateText("%2d.%d", display);
-
-        if (bank == RIGHT)
-        {
-            dm_setRightBank(display);
-        }
-        else
-        {
-            dm_setLeftBank(display);
-        }
+        dm_setBankChars(bank, display);
         ESP_LOGI(TAG, "*** Stack remaining for task '%s' is %d bytes", pcTaskGetTaskName(NULL), uxTaskGetStackHighWaterMark(NULL));
+        CHECK_ERROR_CODE(esp_task_wdt_reset(), ESP_OK); //Comment this line to trigger a TWDT timeout
         vTaskDelay(1000 / portTICK_RATE_MS);
     }
 }
 
 void ct_start_date_task(dm_BANK_SELECT bank)
 {
-    _ct_start_task(bank, &_ct_date_task, "date_task");
+    _ct_start_task(bank, (TaskFunction_t)&_ct_date_task, "date_task");
 }
 
 void ct_stop_task(dm_BANK_SELECT bank)
@@ -109,6 +97,7 @@ void ct_stop_task(dm_BANK_SELECT bank)
 
     if (task_handle_array[bank] != NULL)
     {
+        esp_task_wdt_delete(task_handle_array[bank]);
         vTaskDelete(task_handle_array[bank]);
         task_handle_array[bank] = NULL;
         dm_clear_bank(bank);
