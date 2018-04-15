@@ -1,0 +1,90 @@
+{
+	"version": "2.0.0",
+    "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated"
+    },
+    "options": {
+        "cwd": "${workspaceRoot}",
+
+	},
+    "tasks": [
+        {
+            "label": "esp build all",
+            "command": "C:/msys64/usr/bin/bash.exe -c make -j4 -V1 all",
+            "type": "shell",
+            "problemMatcher": {
+                "owner": "cpp",
+                "fileLocation": "absolute",
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5
+                }
+            }
+        },
+        {
+            "label": "esp build app",
+            "command": "C:/msys64/usr/bin/bash.exe -c make -j4 -V1 app",
+            "type": "shell",
+            "group": "build",
+            "problemMatcher": {
+                "owner": "cpp",
+                "fileLocation": "absolute",
+                "pattern": {
+                    "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "severity": 4,
+                    "message": 5
+                }
+            }
+        },
+        {
+            "label": "esp app-clean",
+            "command": "C:/msys64/usr/bin/bash.exe -c make app-clean",
+            "type": "shell",
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "esp clean",
+            "command": "C:/msys64/usr/bin/bash.exe -c make clean",
+            "type": "shell",
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "esp monitor",
+            "command": "C:/msys64/usr/bin/bash.exe -c python C:/Users/david/GitHub/esp-idf/tools/idf_monitor.py --port COM15 --baud 115200 build/esp32-code.elf",
+            "type": "shell",
+            "problemMatcher": []
+        },
+        {
+            "label": "esp flash",
+            "command": "C:/msys64/usr/bin/bash.exe -c make flash",
+            "type": "shell",
+            "problemMatcher": []
+        },
+        {
+            "label": "esp app-flash",
+            "command": "C:/msys64/usr/bin/bash.exe -c make app-flash",
+            "type": "shell",
+            "problemMatcher": []
+        },
+        {
+            "label": "esp menuconfig",
+            "command": "C:/msys64/usr/bin/bash.exe -c make menuconfig",
+            "type": "shell",
+            "problemMatcher": []
+        }
+    ]
+}
