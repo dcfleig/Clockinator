@@ -1,0 +1,148 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "red clockinator",
+      "intents": [
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "DisplayIntent",
+          "slots": [
+            {
+              "name": "LeftSourceSlot",
+              "type": "ClockinatorSources",
+              "samples": [
+                "just the {LeftSourceSlot}",
+                "show the {LeftSourceSlot}",
+                "{LeftSourceSlot}"
+              ]
+            },
+            {
+              "name": "RightSourceSlot",
+              "type": "ClockinatorSources"
+            }
+          ],
+          "samples": [
+            "the {LeftSourceSlot} and {RightSourceSlot}",
+            "the {LeftSourceSlot}",
+            "display the {LeftSourceSlot} and {RightSourceSlot}",
+            "display the {LeftSourceSlot}",
+            "show the {LeftSourceSlot} and {RightSourceSlot}",
+            "show the {LeftSourceSlot}"
+          ]
+        }
+      ],
+      "types": [
+        {
+          "values": [
+            {
+              "id": "*nothing",
+              "name": {
+                "value": "nothing",
+                "synonyms": [
+                  "blanks",
+                  "blank"
+                ]
+              }
+            },
+            {
+              "id": "weather/precip",
+              "name": {
+                "value": "Precipitation Amount",
+                "synonyms": [
+                  "snow",
+                  "rain"
+                ]
+              }
+            },
+            {
+              "id": "weather/feel_f",
+              "name": {
+                "value": "Outside Feel",
+                "synonyms": [
+                  "feel"
+                ]
+              }
+            },
+            {
+              "id": "*date",
+              "name": {
+                "value": "Date"
+              }
+            },
+            {
+              "id": "weather/temp_f",
+              "name": {
+                "value": "Outside Temperature",
+                "synonyms": [
+                  "outside temp",
+                  "temp"
+                ]
+              }
+            },
+            {
+              "id": "*time",
+              "name": {
+                "value": "Time",
+                "synonyms": [
+                  "time"
+                ]
+              }
+            }
+          ],
+          "name": "ClockinatorSources"
+        }
+      ]
+    },
+    "dialog": {
+      "intents": [
+        {
+          "name": "DisplayIntent",
+          "confirmationRequired": false,
+          "slots": [
+            {
+              "name": "LeftSourceSlot",
+              "type": "ClockinatorSources",
+              "elicitationRequired": true,
+              "confirmationRequired": false,
+              "prompts": {
+                "elicitation": "Elicit.Slot.1048001760985.8800686315"
+              }
+            },
+            {
+              "name": "RightSourceSlot",
+              "type": "ClockinatorSources",
+              "elicitationRequired": false,
+              "confirmationRequired": false
+            }
+          ]
+        }
+      ]
+    },
+    "prompts": [
+      {
+        "id": "Elicit.Slot.1048001760985.8800686315",
+        "variations": [
+          {
+            "type": "PlainText",
+            "value": "What should I display on the clockinator?"
+          },
+          {
+            "type": "PlainText",
+            "value": "What should I show on the clockinator?"
+          }
+        ]
+      }
+    ]
+  }
+}
