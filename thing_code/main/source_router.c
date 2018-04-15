@@ -64,7 +64,7 @@ void start_source_router_task(void *param)
 
 void stop_source_router_task()
 {
-    esp_task_wdt_delete(source_router_task_handle);
+    // esp_task_wdt_delete(source_router_task_handle);
 
     if (source_router_task_handle != NULL)
         vTaskDelete(source_router_task_handle);
@@ -79,8 +79,8 @@ void stop_source_router_task()
 void _source_router_task(void *param)
 {
     //Subscribe this task to TWDT, then check if it is subscribed
-    CHECK_ERROR_CODE(esp_task_wdt_add(NULL), ESP_OK);
-    CHECK_ERROR_CODE(esp_task_wdt_status(NULL), ESP_OK);
+    // CHECK_ERROR_CODE(esp_task_wdt_add(NULL), ESP_OK);
+    // CHECK_ERROR_CODE(esp_task_wdt_status(NULL), ESP_OK);
 
     ESP_LOGI(TAG, "Creating source_router_queue");
     // Create a queue capable of containing 10 char[30] values.
@@ -94,12 +94,13 @@ void _source_router_task(void *param)
 
     while (1)
     {
-        CHECK_ERROR_CODE(esp_task_wdt_reset(), ESP_OK); //Comment this line to trigger a TWDT timeout
+        // CHECK_ERROR_CODE(esp_task_wdt_reset(), ESP_OK); //Comment this line to trigger a TWDT timeout
         if (source_router_queue != 0)
         {
             _SourceRouterMessage message;
             // Receive a message on the created queue.  Block for 10 ticks if a
             // message is not immediately available.
+
             if (xQueueReceive(source_router_queue, &(message), (TickType_t)10))
             {
                 ESP_LOGI(TAG, "Received SourceRouterMessage.");
@@ -108,24 +109,30 @@ void _source_router_task(void *param)
                                                                   : "RIGHT");
                 ESP_LOGI(TAG, "SourceRouterMessage dataSource: %s", message.dataSource);
 
-                if ((strcasecmp(message.dataSource, "*date") == 0) || (strcasecmp(message.dataSource, "*time") == 0))
-                {
+                if (strcasecmp(dm_getBankSource(message.bank), message.dataSource) == 0) {
+                    ESP_LOGI(TAG, "Requested %s on bank %s but it's already displaying it.", message.dataSource, message.bank == LEFT ? "LEFT" : "RIGHT");
+                    continue;
+                }
+
+                if (message.dataSource[0] == '*') {
                     if (strcasecmp(message.dataSource, "*date") == 0)
                     {
                         ESP_LOGI(TAG, "Starting date_task on %s bank", message.bank == LEFT ? "LEFT" : "RIGHT");
-
                         ct_start_date_task(message.bank);
-                    }
-                    else
+                    } else if (strcasecmp(message.dataSource, "*time") == 0)
                     {
                         ESP_LOGI(TAG, "Starting time_task on %s bank", message.bank == LEFT ? "LEFT" : "RIGHT");
                         ct_start_time_task(message.bank);
+                    } else if (strcasecmp(message.dataSource, "*nothing") == 0)
+                    {
+                        ESP_LOGI(TAG, "Clearing data on %s bank", message.bank == LEFT ? "LEFT" : "RIGHT");
+                        ct_stop_task(message.bank);
+                        tt_bank_unsubscribe(message.bank);
+                        dm_clear_bank(message.bank);
                     }
-                }
-                else
-                {
+                } else {
                     ct_stop_task(message.bank);
-
+                    dm_clear_bank(message.bank);
                     if (strlen(message.dataSource) != 0 && message.dataSource[0] != ' ' && message.dataSource[0] != '$')
                     {
                         ESP_LOGI(TAG, "Setting %s bank topic to %s", message.bank == LEFT ? "LEFT" : "RIGHT", message.dataSource);
@@ -134,7 +141,7 @@ void _source_router_task(void *param)
                 }
             }
         }
-        ESP_LOGI(TAG, "*** Stack remaining for task '%s' is %d bytes", pcTaskGetTaskName(NULL), uxTaskGetStackHighWaterMark(NULL));
+        ESP_LOGD(TAG, "*** Stack remaining for task '%s' is %d bytes", pcTaskGetTaskName(NULL), uxTaskGetStackHighWaterMark(NULL));
         vTaskDelay(1000 / portTICK_RATE_MS);
     }
 }

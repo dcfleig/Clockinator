@@ -103,7 +103,7 @@ void ShadowUpdateStatusCallback(const char *pThingName, ShadowActions_t action, 
     }
     else if (SHADOW_ACK_ACCEPTED == status)
     {
-        ESP_LOGI(TAG, "Update accepted");
+        ESP_LOGD(TAG, "Update accepted");
         xEventGroupSetBits(app_event_group, SHADOW_CONNECTED_BIT);
     }
 }
@@ -114,7 +114,7 @@ void sntp_hostname_Callback(const char *pJsonString, uint32_t JsonStringDataLen,
     IOT_UNUSED(JsonStringDataLen);
     if (pContext != NULL)
     {
-        ESP_LOGI(TAG, "Delta - %s value changed to %s", (char *)(pContext->pKey), (char *)(pContext->pData));
+        ESP_LOGD(TAG, "Delta - %s value changed to %s", (char *)(pContext->pKey), (char *)(pContext->pData));
         tm_setNTPServer((char *)(pContext->pData));
     }
 }
@@ -125,7 +125,7 @@ void timezone_Callback(const char *pJsonString, uint32_t JsonStringDataLen, json
     IOT_UNUSED(JsonStringDataLen);
     if (pContext != NULL)
     {
-        ESP_LOGI(TAG, "Delta - %s value changed to %s", (char *)(pContext->pKey), (char *)(pContext->pData));
+        ESP_LOGD(TAG, "Delta - %s value changed to %s", (char *)(pContext->pKey), (char *)(pContext->pData));
         tm_setTimezone((char *)(pContext->pData));
     }
 }
@@ -136,7 +136,7 @@ void leftSourceSlotHandler_Callback(const char *pJsonString, uint32_t JsonString
     IOT_UNUSED(JsonStringDataLen);
     if (pContext != NULL)
     {
-        ESP_LOGI(TAG, "Delta - %s value changed to %s", (char *)(pContext->pKey), (char *)(pContext->pData));
+        ESP_LOGD(TAG, "Delta - %s value changed to %s", (char *)(pContext->pKey), (char *)(pContext->pData));
         ESP_LOGI(TAG, "Creating SourceRouterMessage to send to source_route_task");
         struct SourceRouterMessage srm;
         srm.bank = LEFT;
@@ -147,7 +147,6 @@ void leftSourceSlotHandler_Callback(const char *pJsonString, uint32_t JsonString
         ESP_LOGI(TAG, "SourceRouterMessage data: %s", srm.dataSource);
 
         xEventGroupWaitBits(app_event_group, SOURCE_ROUTER_STARTED_BIT, false, true, portMAX_DELAY);
-
         xQueueSend(source_router_queue, &srm, (TickType_t)0);
     }
 }
@@ -158,7 +157,7 @@ void rightSourceSlotHandler_Callback(const char *pJsonString, uint32_t JsonStrin
     IOT_UNUSED(JsonStringDataLen);
     if (pContext != NULL)
     {
-        ESP_LOGI(TAG, "Delta - %s value changed to %s", (char *)(pContext->pKey), (char *)(pContext->pData));
+        ESP_LOGD(TAG, "Delta - %s value changed to %s", (char *)(pContext->pKey), (char *)(pContext->pData));
         ESP_LOGI(TAG, "Creating SourceRouterMessage to send to source_route_task");
         struct SourceRouterMessage srm;
         srm.bank = RIGHT;
@@ -169,7 +168,6 @@ void rightSourceSlotHandler_Callback(const char *pJsonString, uint32_t JsonStrin
         ESP_LOGI(TAG, "SourceRouterMessage data: %s", srm.dataSource);
 
         xEventGroupWaitBits(app_event_group, SOURCE_ROUTER_STARTED_BIT, false, true, portMAX_DELAY);
-
         xQueueSend(source_router_queue, &srm, (TickType_t)0);
     }
 }
@@ -180,7 +178,7 @@ void brightnessHandler_Callback(const char *pJsonString, uint32_t JsonStringData
     IOT_UNUSED(JsonStringDataLen);
     if (pContext != NULL)
     {
-        ESP_LOGI(TAG, "Delta - %s value changed to %d", (char *)(pContext->pKey), *(int8_t *)(pContext->pData));
+        ESP_LOGD(TAG, "Delta - %s value changed to %d", (char *)(pContext->pKey), *(int8_t *)(pContext->pData));
         //int brightness = pContext->pData;
         dm_setBrightness(*(int8_t *)(pContext->pData));
     }
@@ -283,7 +281,7 @@ void _shadow_task(void *param)
     scp.pMqttClientId = CONFIG_AWS_EXAMPLE_CLIENT_ID;
     scp.mqttClientIdLen = (uint16_t)strlen(CONFIG_AWS_EXAMPLE_CLIENT_ID);
 
-    ESP_LOGI(TAG, "Shadow Connect");
+    ESP_LOGD(TAG, "Shadow Connect");
     rc = aws_iot_shadow_connect(&mqttClient, &scp);
     if (SUCCESS != rc)
     {
@@ -375,12 +373,12 @@ void _shadow_task(void *param)
     }
 
     //Subscribe this task to TWDT, then check if it is subscribed
-    CHECK_ERROR_CODE(esp_task_wdt_add(NULL), ESP_OK);
-    CHECK_ERROR_CODE(esp_task_wdt_status(NULL), ESP_OK);
+    // CHECK_ERROR_CODE(esp_task_wdt_add(NULL), ESP_OK);
+    // CHECK_ERROR_CODE(esp_task_wdt_status(NULL), ESP_OK);
 
     while (1)
     {
-        CHECK_ERROR_CODE(esp_task_wdt_reset(), ESP_OK); //Comment this line to trigger a TWDT timeout
+        // CHECK_ERROR_CODE(esp_task_wdt_reset(), ESP_OK); //Comment this line to trigger a TWDT timeout
 
         rc = aws_iot_shadow_yield(&mqttClient, 200);
         if (NETWORK_ATTEMPTING_RECONNECT == rc || shadowUpdateInProgress)
@@ -392,13 +390,14 @@ void _shadow_task(void *param)
         }
 
         shadow_battery_voltage = getBatteryVoltage();
+        strcpy(shadow_localtime, tm_getLocalDateTimeText());
 
         if (SUCCESS != rc)
         {
             ESP_LOGE(TAG, "An error occurred in the loop %d", rc);
         }
 
-        ESP_LOGI(TAG, "Building shadow update json");
+        ESP_LOGD(TAG, "Building shadow update json");
         rc = aws_iot_shadow_init_json_document(JsonDocumentBuffer, sizeOfJsonDocumentBuffer);
         if (SUCCESS == rc)
         {
@@ -415,7 +414,7 @@ void _shadow_task(void *param)
                 rc = aws_iot_finalize_json_document(JsonDocumentBuffer, sizeOfJsonDocumentBuffer);
                 if (SUCCESS == rc)
                 {
-                    ESP_LOGI(TAG, "Updating Shadow: %s", JsonDocumentBuffer);
+                    ESP_LOGD(TAG, "Updating Shadow: %s", JsonDocumentBuffer);
                     rc = aws_iot_shadow_update(&mqttClient, CONFIG_AWS_EXAMPLE_THING_NAME, JsonDocumentBuffer,
                                                ShadowUpdateStatusCallback, NULL, 5, true);
                     shadowUpdateInProgress = true;
@@ -423,12 +422,12 @@ void _shadow_task(void *param)
             }
         }
 
-        ESP_LOGI(TAG, "*** Stack remaining for task '%s' is %d bytes", pcTaskGetTaskName(NULL), uxTaskGetStackHighWaterMark(NULL));
+        ESP_LOGD(TAG, "*** Stack remaining for task '%s' is %d bytes", pcTaskGetTaskName(NULL), uxTaskGetStackHighWaterMark(NULL));
 
         vTaskDelay(1000 / portTICK_RATE_MS);
     }
 
-    ESP_LOGI(TAG, "Disconnecting");
+    ESP_LOGD(TAG, "Disconnecting");
     rc = aws_iot_shadow_disconnect(&mqttClient);
 
     if (SUCCESS != rc)
@@ -443,7 +442,7 @@ void start_shadow_task(void *param)
 {
     if (shadow_task_handle == NULL)
     {
-        ESP_LOGI(TAG, "Starting _shadow_task...");
+        ESP_LOGD(TAG, "Starting _shadow_task...");
         xTaskCreate(&_shadow_task, "_shadow_task", SHADOW_TASK_STACK_DEPTH, param, SHADOW_TASK_PRIORITY, &shadow_task_handle);
         if (shadow_task_handle == NULL)
         {
@@ -452,16 +451,16 @@ void start_shadow_task(void *param)
     }
     else
     {
-        ESP_LOGI(TAG, "Was going to start _shadow_task but it's already running");
+        ESP_LOGD(TAG, "Was going to start _shadow_task but it's already running");
     }
 }
 
 void stop_shadow_task()
 {
     IoT_Error_t rc = FAILURE;
-    ESP_LOGI(TAG, "Stopping _shadow_task...");
+    ESP_LOGD(TAG, "Stopping _shadow_task...");
 
-    esp_task_wdt_delete(shadow_task_handle);
+    // esp_task_wdt_delete(shadow_task_handle);
 
     ESP_LOGI(TAG, "Disconnecting");
     rc = aws_iot_shadow_disconnect(&mqttClient);
@@ -472,5 +471,5 @@ void stop_shadow_task()
         vTaskDelay(100 / portTICK_RATE_MS);
     }
     vTaskDelete(shadow_task_handle);
-    ESP_LOGI(TAG, "_shadow_task stopped");
+    ESP_LOGD(TAG, "_shadow_task stopped");
 }

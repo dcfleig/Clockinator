@@ -37,8 +37,8 @@ static void _ct_time_task(dm_BANK_SELECT bank)
         tm_getLocalTimeText("%2d.%02d", display);
         dm_setBankChars(bank, display);
 
-        ESP_LOGI(TAG, "*** Stack remaining for task '%s' is %d bytes", pcTaskGetTaskName(NULL), uxTaskGetStackHighWaterMark(NULL));
-        CHECK_ERROR_CODE(esp_task_wdt_reset(), ESP_OK); //Comment this line to trigger a TWDT timeout
+        ESP_LOGD(TAG, "*** Stack remaining for task '%s' is %d bytes", pcTaskGetTaskName(NULL), uxTaskGetStackHighWaterMark(NULL));
+        // CHECK_ERROR_CODE(esp_task_wdt_reset(), ESP_OK); //Comment this line to trigger a TWDT timeout
         vTaskDelay(1000 / portTICK_RATE_MS);
     }
 }
@@ -46,14 +46,14 @@ static void _ct_time_task(dm_BANK_SELECT bank)
 void _ct_start_task(dm_BANK_SELECT bank, TaskFunction_t task, char *taskName)
 {
     //Subscribe this task to TWDT, then check if it is subscribed
-    CHECK_ERROR_CODE(esp_task_wdt_add(NULL), ESP_OK);
-    CHECK_ERROR_CODE(esp_task_wdt_status(NULL), ESP_OK);
+    // CHECK_ERROR_CODE(esp_task_wdt_add(NULL), ESP_OK);
+    // CHECK_ERROR_CODE(esp_task_wdt_status(NULL), ESP_OK);
 
     if (task_handle_array[bank] != NULL)
     {
         ct_stop_task(bank);
     }
-    ESP_LOGI(TAG, "starting task %s on the %s bank", taskName, bank == LEFT ? "LEFT" : "RIGHT");
+    ESP_LOGD(TAG, "starting task %s on the %s bank", taskName, bank == LEFT ? "LEFT" : "RIGHT");
     xTaskCreate(task, taskName, CLOCK_TASKS_STACK_DEPTH, (void *)bank, CLOCK_TASKS_PRIORITY, &task_handle_array[bank]);
     if (task_handle_array[bank] == NULL)
     {
@@ -61,7 +61,7 @@ void _ct_start_task(dm_BANK_SELECT bank, TaskFunction_t task, char *taskName)
     }
     else
     {
-        ESP_LOGI(TAG, "%s task creation successful", taskName);
+        ESP_LOGD(TAG, "%s task creation successful", taskName);
     }
 }
 
@@ -73,15 +73,15 @@ void ct_start_time_task(dm_BANK_SELECT bank)
 static void _ct_date_task(dm_BANK_SELECT bank)
 {
     //Subscribe this task to TWDT, then check if it is subscribed
-    CHECK_ERROR_CODE(esp_task_wdt_add(NULL), ESP_OK);
-    CHECK_ERROR_CODE(esp_task_wdt_status(NULL), ESP_OK);
+    // CHECK_ERROR_CODE(esp_task_wdt_add(NULL), ESP_OK);
+    // CHECK_ERROR_CODE(esp_task_wdt_status(NULL), ESP_OK);
     while (1)
     {
         char display[5] = "";
         tm_getLocalDateText("%2d.%d", display);
         dm_setBankChars(bank, display);
-        ESP_LOGI(TAG, "*** Stack remaining for task '%s' is %d bytes", pcTaskGetTaskName(NULL), uxTaskGetStackHighWaterMark(NULL));
-        CHECK_ERROR_CODE(esp_task_wdt_reset(), ESP_OK); //Comment this line to trigger a TWDT timeout
+        ESP_LOGD(TAG, "*** Stack remaining for task '%s' is %d bytes", pcTaskGetTaskName(NULL), uxTaskGetStackHighWaterMark(NULL));
+        // CHECK_ERROR_CODE(esp_task_wdt_reset(), ESP_OK); //Comment this line to trigger a TWDT timeout
         vTaskDelay(1000 / portTICK_RATE_MS);
     }
 }
@@ -97,7 +97,7 @@ void ct_stop_task(dm_BANK_SELECT bank)
 
     if (task_handle_array[bank] != NULL)
     {
-        esp_task_wdt_delete(task_handle_array[bank]);
+        // esp_task_wdt_delete(task_handle_array[bank]);
         vTaskDelete(task_handle_array[bank]);
         task_handle_array[bank] = NULL;
         dm_clear_bank(bank);

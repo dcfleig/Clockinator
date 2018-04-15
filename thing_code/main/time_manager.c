@@ -33,8 +33,8 @@ char _sntp_timezone[30] = "EST5EDT,M3.2.0/2,M11.1.0";
 
 void tm_init()
 {
-    ESP_LOGI(TAG, "Starting SNTP");
-    ESP_LOGI(TAG, "Setting TZ to %s", _sntp_timezone);
+    ESP_LOGD(TAG, "Starting SNTP");
+    ESP_LOGD(TAG, "Setting TZ to %s", _sntp_timezone);
 
     setenv("TZ", _sntp_timezone, 1);
     tzset();
@@ -50,7 +50,7 @@ void tm_init()
     const int retry_count = 10;
     while (timeinfo.tm_year < (2016 - 1900) && ++retry < retry_count)
     {
-        ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
+        ESP_LOGD(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);
         vTaskDelay(2000 / portTICK_PERIOD_MS);
         time(&now);
         localtime_r(&now, &timeinfo);

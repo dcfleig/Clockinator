@@ -43,8 +43,8 @@ uint8_t maxDevices = 1;
 #define OP_SHUTDOWN 0x0c
 #define OP_DISPLAYTEST 0x0f
 
-char _bankCharsArray[2][(DISPLAY_LENGTH / 2) + 1];
-char _bankSourceArray[2][MAX_TOPIC_NAME_LENGTH];
+char _bankCharsArray[2][(DISPLAY_LENGTH / 2) + 1] = { "", "" };
+char _bankSourceArray[2][MAX_TOPIC_NAME_LENGTH + 1] = { "", "" };
 uint8_t _brightness = 10;
 
 /*
@@ -75,7 +75,7 @@ const static uint8_t charTable[] = {
     0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000,
     0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000};
 
-char *dm_getBankChars(dm_BANK_SELECT bank) { return &_bankCharsArray[bank][0]; };
+char *dm_getBankChars(dm_BANK_SELECT bank) { return _bankCharsArray[bank]; };
 void dm_setBankChars(dm_BANK_SELECT bank, const char *bankChars)
 {
     //strcpy((char *)_bankCharsArray[bank][0], bankChars);
@@ -83,11 +83,11 @@ void dm_setBankChars(dm_BANK_SELECT bank, const char *bankChars)
     dm_display(bankChars, bank * 4 + 1);
 };
 
-char *dm_getBankSource(dm_BANK_SELECT bank) { return (char *)_bankSourceArray[bank][0]; };
+char *dm_getBankSource(dm_BANK_SELECT bank) { return _bankSourceArray[bank]; };
+    
 void dm_setBankSource(dm_BANK_SELECT bank, const char *bankSource)
 {
-    //strcpy((char *)_bankSourceArray[bank][0], bankSource);
-    ESP_LOGI(TAG, "Setting %s bank source to '%s'", bank == LEFT ? "LEFT" : "RIGHT", (char *)_bankSourceArray[bank][0]);
+    strcpy(_bankSourceArray[bank], bankSource);
     // *** subscribe here
 };
 
@@ -119,18 +119,6 @@ void dm_clear_bank(dm_BANK_SELECT bank)
 
 void dm_init()
 {
-    for (int bank = 0; bank < 2; bank++)
-    {
-        for (int c = 0; c < MAX_TOPIC_NAME_LENGTH; c++)
-        {
-            _bankSourceArray[bank][c] = '\0';
-        }
-        for (int c = 0; c < (DISPLAY_LENGTH / 2) + 1; c++)
-        {
-            _bankCharsArray[bank][c] = '\0';
-        }
-    }
-
     _dm_spiInit();
     _dm_spiTransfer(OP_DISPLAYTEST, 0);
     //scanlimit is set to max on startup

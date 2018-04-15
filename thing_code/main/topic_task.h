@@ -38,6 +38,8 @@ void tt_publish_message(const char *topic, const char *message);
 
 void tt_bank_subscribe(dm_BANK_SELECT bank, const char *topic);
 
+void tt_bank_unsubscribe(dm_BANK_SELECT bank);
+
 void tt_setTopicCallback(const char *topic, void (*fptr)());
 
 #endif

@@ -48,12 +48,10 @@ void _iot_subscribe_callback_handler(AWS_IoT_Client *pClient, char *topicName, u
 {
     ESP_LOGI(TAG, "Subscribe callback");
     ESP_LOGI(TAG, "%.*s\t%.*s : Bank %s", topicNameLen, topicName, (int)params->payloadLen, (char *)params->payload, (dm_BANK_SELECT *)pData == LEFT ? "LEFT" : "RIGHT");
+    char tmpData[20] = "";
+    strncpy(tmpData, (char *)params->payload, (int)params->payloadLen);
 
-    char tmp[200] = "";
-    strncpy(tmp, (char *)params->payload, (int)params->payloadLen);
-    memset(tmp, '\0', strlen(tmp));
-
-    dm_setBankChars(*(dm_BANK_SELECT *)pData, tmp);
+    dm_setBankChars((dm_BANK_SELECT)pData, tmpData);
 }
 
 void tt_setTopicCallback(const char *topic, void (*fptr)())
@@ -70,7 +68,7 @@ void _tt_topic_task(void *params)
     // while ((NETWORK_ATTEMPTING_RECONNECT == rc || NETWORK_RECONNECTED == rc || SUCCESS == rc))
     while (1)
     {
-        CHECK_ERROR_CODE(esp_task_wdt_reset(), ESP_OK); //Comment this line to trigger a TWDT timeout
+        // CHECK_ERROR_CODE(esp_task_wdt_reset(), ESP_OK); //Comment this line to trigger a TWDT timeout
         // Don't need to yield here as it supposedly happens as part of the shadow yield
 
         // rc = aws_iot_mqtt_yield(&mqttClient, 200);
@@ -81,7 +79,7 @@ void _tt_topic_task(void *params)
         //     // we will skip the rest of the loop.
         // }
 
-        ESP_LOGI(TAG, "*** Stack remaining for task '%s' is %d bytes", pcTaskGetTaskName(NULL), uxTaskGetStackHighWaterMark(NULL));
+        ESP_LOGD(TAG, "*** Stack remaining for task '%s' is %d bytes", pcTaskGetTaskName(NULL), uxTaskGetStackHighWaterMark(NULL));
         vTaskDelay(1000 / portTICK_RATE_MS);
         //tt_publish_message("test_topic/esp32", "snorgie borgies");
     }
@@ -112,6 +110,9 @@ void tt_bank_subscribe(dm_BANK_SELECT bank, const char *topic)
     {
         ESP_LOGE(TAG, "Error subscribing : %d ", rc);
         return;
+    } else {
+
+        tt_publish_message(strcat(topic,"/request"), CONFIG_AWS_EXAMPLE_THING_NAME);
     }
 }
 
@@ -135,7 +136,7 @@ void tt_start_topic_task()
     }
 }
 
-void _tt_unsubscribe(dm_BANK_SELECT bank)
+void tt_bank_unsubscribe(dm_BANK_SELECT bank)
 {
     IoT_Error_t rc = FAILURE;
     ESP_LOGI(TAG, "Unsubscribing from topic %s on bank %s", dm_getBankSource(bank), bank == LEFT ? "LEFT" : "RIGHT");
@@ -153,8 +154,8 @@ void tt_stop_topic_task()
     if (task_handle != NULL)
     {
         // Try unsubscribing from all the topics first
-        _tt_unsubscribe(LEFT);
-        _tt_unsubscribe(RIGHT);
+        tt_bank_unsubscribe(LEFT);
+        tt_bank_unsubscribe(RIGHT);
 
         vTaskDelete(task_handle);
         task_handle = NULL;

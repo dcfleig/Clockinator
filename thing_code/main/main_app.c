@@ -120,14 +120,14 @@ void app_main()
 {
     printf("Initialize TWDT\n");
     //Initialize or reinitialize TWDT
-    CHECK_ERROR_CODE(esp_task_wdt_init(TWDT_TIMEOUT_S, true), ESP_OK);
+    // CHECK_ERROR_CODE(esp_task_wdt_init(TWDT_TIMEOUT_S, true), ESP_OK);
 
 //Subscribe Idle Tasks to TWDT if they were not subscribed at startup
 #ifndef CONFIG_TASK_WDT_CHECK_IDLE_TASK_CPU0
-    esp_task_wdt_add(xTaskGetIdleTaskHandleForCPU(0));
+    // esp_task_wdt_add(xTaskGetIdleTaskHandleForCPU(0));
 #endif
 #ifndef CONFIG_TASK_WDT_CHECK_IDLE_TASK_CPU1
-    esp_task_wdt_add(xTaskGetIdleTaskHandleForCPU(1));
+    // esp_task_wdt_add(xTaskGetIdleTaskHandleForCPU(1));
 #endif
 
     app_event_group = xEventGroupCreate();
@@ -160,6 +160,8 @@ void app_main()
     /* Wait for WiFI to show as connected */
     xEventGroupWaitBits(app_event_group, IP_CONNECTED_BIT,
                         false, true, portMAX_DELAY);
+                 
+    start_source_router_task(NULL);
 
     start_shadow_task(NULL);
 
@@ -170,9 +172,7 @@ void app_main()
 
     tm_init();
 
-    start_source_router_task(NULL);
-
-    //tt_start_topic_task(NULL);
+    tt_start_topic_task(NULL);
 
     while (1)
     {
