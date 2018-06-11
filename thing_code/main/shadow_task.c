@@ -51,7 +51,7 @@ extern SemaphoreHandle_t mqttMutex;
 
 static TaskHandle_t shadow_task_handle = NULL;
 
-#define MAX_LENGTH_OF_UPDATE_JSON_BUFFER 500
+#define MAX_LENGTH_OF_UPDATE_JSON_BUFFER 1500
 
 /* CA Root certificate, device ("Thing") certificate and device
  * ("Thing") key.
@@ -136,6 +136,7 @@ void leftSourceSlotHandler_Callback(const char *pJsonString, uint32_t JsonString
     IOT_UNUSED(JsonStringDataLen);
     if (pContext != NULL)
     {
+        ESP_LOGI(TAG, "json string: %s", pJsonString);
         ESP_LOGD(TAG, "Delta - %s value changed to %s", (char *)(pContext->pKey), (char *)(pContext->pData));
         ESP_LOGI(TAG, "Creating SourceRouterMessage to send to source_route_task");
         struct SourceRouterMessage srm;

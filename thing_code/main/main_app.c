@@ -90,26 +90,6 @@ static void initialise_wifi(void)
     ESP_ERROR_CHECK(esp_wifi_start());
 }
 
-void startup_monitor_task(void *param)
-{
-    EventBits_t eventBits = 0;
-    while (eventBits != (IP_CONNECTED_BIT | SHADOW_CONNECTED_BIT))
-    {
-        eventBits = xEventGroupWaitBits(app_event_group, IP_CONNECTED_BIT | SHADOW_CONNECTED_BIT,
-                                        false, false, 0);
-        ESP_LOGI(TAG, "Eventbits = %i", eventBits);
-        char display[4] = "    ";
-        display[1] = eventBits & IP_CONNECTED_BIT ? '.' : ' ';
-        display[2] = eventBits & SHADOW_CONNECTED_BIT ? '.' : ' ';
-        display[3] = eventBits & SNTP_CONNECTED_BIT ? '.' : ' ';
-        dm_display(display, 0);
-        vTaskDelay(1000 / portTICK_RATE_MS);
-    }
-    ESP_LOGI(TAG, "Startup complete. Deleting startup_monitor_task.");
-    dm_clear();
-    vTaskDelete(NULL);
-}
-
 void logSystemInfo()
 {
     ESP_LOGI(TAG, "esp-idf version: %s", esp_get_idf_version());
@@ -118,33 +98,11 @@ void logSystemInfo()
 
 void app_main()
 {
-    //printf("Initialize TWDT\n");
-    //Initialize or reinitialize TWDT
-    // CHECK_ERROR_CODE(esp_task_wdt_init(TWDT_TIMEOUT_S, true), ESP_OK);
-
-// //Subscribe Idle Tasks to TWDT if they were not subscribed at startup
-// #ifndef CONFIG_TASK_WDT_CHECK_IDLE_TASK_CPU0
-//     // esp_task_wdt_add(xTaskGetIdleTaskHandleForCPU(0));
-// #endif
-// #ifndef CONFIG_TASK_WDT_CHECK_IDLE_TASK_CPU1
-//     // esp_task_wdt_add(xTaskGetIdleTaskHandleForCPU(1));
-// #endif
-
     app_event_group = xEventGroupCreate();
-
-    TaskHandle_t startup_monitor_task_handle = NULL;
 
     dm_init();
     dm_clear();
     dm_led_test();
-
-    // ESP_LOGI(TAG, "Starting startupMonitorTask...");
-    // xTaskCreate(&startup_monitor_task, "startup_monitor_task", 3000, NULL, 3, &startup_monitor_task_handle);
-    // if (startup_monitor_task_handle == NULL)
-    // {
-    //     ESP_LOGE(TAG, "startup_monitor_task creation failed");
-    //     abort();
-    // }
 
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES)
@@ -160,7 +118,7 @@ void app_main()
     /* Wait for WiFI to show as connected */
     xEventGroupWaitBits(app_event_group, IP_CONNECTED_BIT,
                         false, true, portMAX_DELAY);
-                 
+
     start_source_router_task(NULL);
 
     start_shadow_task(NULL);
@@ -173,10 +131,4 @@ void app_main()
     tm_init();
 
     tt_start_topic_task(NULL);
-
-    while (1)
-    {
-        logSystemInfo();
-        vTaskDelay(5000 / portTICK_RATE_MS);
-    }
 }

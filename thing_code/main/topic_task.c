@@ -110,9 +110,11 @@ void tt_bank_subscribe(dm_BANK_SELECT bank, const char *topic)
     {
         ESP_LOGE(TAG, "Error subscribing : %d ", rc);
         return;
-    } else {
+    }
+    else
+    {
 
-        tt_publish_message(strcat(topic,"/request"), CONFIG_AWS_EXAMPLE_THING_NAME);
+        tt_publish_message(strcat(topic, "/request"), CONFIG_AWS_EXAMPLE_THING_NAME);
     }
 }
 
@@ -128,7 +130,7 @@ void tt_start_topic_task()
     xTaskCreate(&_tt_topic_task, "_tt_topic_task", TOPIC_TASK_STACK_DEPTH, NULL, TOPIC_TASK_PRIORITY, &task_handle);
     if (task_handle == NULL)
     {
-        ESP_LOGE(TAG, "topic_task creation failed")
+        ESP_LOGE(TAG, "topic_task creation failed");
     }
     else
     {

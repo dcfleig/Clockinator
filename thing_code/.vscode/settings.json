@@ -66,7 +66,8 @@
 		"stdio.h": "c",
 		"adc.h": "c",
 		"sdmmc_host.h": "c",
-		"display_manager.h": "c"
+		"display_manager.h": "c",
+		"esp_wifi.h": "c"
 	},
 	"git.defaultCloneDirectory": "c:/Users/david/Github",
 }

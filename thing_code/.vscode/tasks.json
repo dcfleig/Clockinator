@@ -9,14 +9,14 @@
     "options": {
         "cwd": "${workspaceRoot}",
         "env": {
-            "IDF_PATH" : "C:/Users/david/GitHub/esp-idf" ,
-            "PATH" : "C:/msys64/usr/bin/;C:/msys64/opt/xtensa-esp32-elf/bin;C:/msys64/mingw32/bin"
+            "IDF_PATH" : "D:/git/esp-idf" ,
+            "PATH" : "D:/msys32/usr/bin/;D:/msys32/opt/xtensa-esp32-elf/bin;D:/msys32/mingw32/bin"
         }
 	},
     "tasks": [
         {
             "label": "esp build all",
-            "command": "C:/msys64/usr/bin/bash.exe -c make -j4 -V1 all",
+            "command": "D:/msys32/usr/bin/bash.exe -c make -j4 -V1 all",
             "type": "shell",
             "problemMatcher": {
                 "owner": "cpp",
@@ -33,9 +33,12 @@
         },
         {
             "label": "esp build app",
-            "command": "C:/msys64/usr/bin/bash.exe -c make -j4 -V1 app",
+            "command": "D:/msys32/usr/bin/bash.exe -c make -j4 -V1 app",
             "type": "shell",
-            "group": "build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
             "problemMatcher": {
                 "owner": "cpp",
                 "fileLocation": "absolute",
@@ -51,7 +54,7 @@
         },
         {
             "label": "esp app-clean",
-            "command": "C:/msys64/usr/bin/bash.exe -c make app-clean",
+            "command": "D:/msys32/usr/bin/bash.exe -c make app-clean",
             "type": "shell",
             "problemMatcher": [
                 "$gcc"
@@ -59,7 +62,7 @@
         },
         {
             "label": "esp clean",
-            "command": "C:/msys64/usr/bin/bash.exe -c make clean",
+            "command": "D:/msys32/usr/bin/bash.exe -c make clean",
             "type": "shell",
             "problemMatcher": [
                 "$gcc"
@@ -67,25 +70,25 @@
         },
         {
             "label": "esp monitor",
-            "command": "C:/msys64/usr/bin/bash.exe -c python C:/Users/david/GitHub/esp-idf/tools/idf_monitor.py --port COM15 --baud 115200 build/esp32-code.elf",
+            "command": "D:/msys32/usr/bin/bash.exe -c python C:/Users/david/GitHub/esp-idf/tools/idf_monitor.py --port COM15 --baud 115200 build/esp32-code.elf",
             "type": "shell",
             "problemMatcher": []
         },
         {
             "label": "esp flash",
-            "command": "C:/msys64/usr/bin/bash.exe -c make flash",
+            "command": "D:/msys32/usr/bin/bash.exe -c make flash",
             "type": "shell",
             "problemMatcher": []
         },
         {
             "label": "esp app-flash",
-            "command": "C:/msys64/usr/bin/bash.exe -c make app-flash",
+            "command": "D:/msys32/usr/bin/bash.exe -c make app-flash",
             "type": "shell",
             "problemMatcher": []
         },
         {
             "label": "esp menuconfig",
-            "command": "C:/msys64/usr/bin/bash.exe -c make menuconfig",
+            "command": "D:/msys32/usr/bin/bash.exe -c make menuconfig",
             "type": "shell",
             "problemMatcher": []
         }

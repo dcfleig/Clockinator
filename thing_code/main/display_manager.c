@@ -18,6 +18,7 @@
 #include "app_constants.h"
 
 #define SPI_MOSI_PIN 21
+#define SPI_MISO_PIN -1
 #define SPI_CLK_PIN 16
 #define SPI_CS_PIN 17
 
@@ -43,8 +44,8 @@ uint8_t maxDevices = 1;
 #define OP_SHUTDOWN 0x0c
 #define OP_DISPLAYTEST 0x0f
 
-char _bankCharsArray[2][(DISPLAY_LENGTH / 2) + 1] = { "", "" };
-char _bankSourceArray[2][MAX_TOPIC_NAME_LENGTH + 1] = { "", "" };
+char _bankCharsArray[2][(DISPLAY_LENGTH / 2) + 1] = {"", ""};
+char _bankSourceArray[2][MAX_TOPIC_NAME_LENGTH + 1] = {"", ""};
 uint8_t _brightness = 10;
 
 /*
@@ -76,6 +77,7 @@ const static uint8_t charTable[] = {
     0b00000000, 0b00000000, 0b00000000, 0b00000000, 0b00000000};
 
 char *dm_getBankChars(dm_BANK_SELECT bank) { return _bankCharsArray[bank]; };
+
 void dm_setBankChars(dm_BANK_SELECT bank, const char *bankChars)
 {
     //strcpy((char *)_bankCharsArray[bank][0], bankChars);
@@ -84,7 +86,7 @@ void dm_setBankChars(dm_BANK_SELECT bank, const char *bankChars)
 };
 
 char *dm_getBankSource(dm_BANK_SELECT bank) { return _bankSourceArray[bank]; };
-    
+
 void dm_setBankSource(dm_BANK_SELECT bank, const char *bankSource)
 {
     strcpy(_bankSourceArray[bank], bankSource);
@@ -222,26 +224,35 @@ void _dm_setChar(int digit, const char value, bool dp)
 
 void _dm_spiInit()
 {
-    //Initialize non-SPI GPIOs
-    gpio_set_direction(SPI_MOSI_PIN, GPIO_MODE_OUTPUT);
-    gpio_set_direction(SPI_CLK_PIN, GPIO_MODE_OUTPUT);
-    gpio_set_direction(SPI_CS_PIN, GPIO_MODE_OUTPUT);
+    // //Initialize non-SPI GPIOs
+    // gpio_set_direction(SPI_MOSI_PIN, GPIO_MODE_OUTPUT);
+    // //gpio_set_direction(SPI_MISO_PIN, GPIO_MODE_INPUT);
+    // gpio_set_direction(SPI_CLK_PIN, GPIO_MODE_OUTPUT);
+    // gpio_set_direction(SPI_CS_PIN, GPIO_MODE_OUTPUT);
 
-    ESP_LOGD(TAG, "init: mosi=%d, miso=%d, clk=%d, cs=%d", SPI_MOSI_PIN, -1, SPI_CLK_PIN, SPI_CS_PIN);
+    ESP_LOGD(TAG, "init: mosi=%d, miso=%d, clk=%d, cs=%d", SPI_MOSI_PIN, SPI_MISO_PIN, SPI_CLK_PIN, SPI_CS_PIN);
 
-    spi_bus_config_t bus_config;
-    bus_config.sclk_io_num = SPI_CLK_PIN;  // CLK
-    bus_config.mosi_io_num = SPI_MOSI_PIN; // MOSI
-    bus_config.miso_io_num = -1;           // MISO
-    bus_config.quadwp_io_num = -1;         // Not used
-    bus_config.quadhd_io_num = -1;         // Not used
-    bus_config.max_transfer_sz = 0;        // 0 means use default.
+    // spi_bus_config_t bus_config;
+    // bus_config.sclk_io_num = SPI_CLK_PIN;  // CLK
+    // bus_config.mosi_io_num = SPI_MOSI_PIN; // MOSI
+    // bus_config.miso_io_num = SPI_MISO_PIN; // MISO
+    // bus_config.quadwp_io_num = -1;         // Not used
+    // bus_config.quadhd_io_num = -1;         // Not used
+    // bus_config.max_transfer_sz = 0;        // 0 means use default.
 
-    ESP_LOGI(TAG, "... Initializing bus; host=%d", m_host);
+    //Configuration for the SPI bus
+    spi_bus_config_t buscfg = {
+        .mosi_io_num = SPI_MOSI_PIN,
+        .miso_io_num = SPI_MISO_PIN,
+        .sclk_io_num = SPI_CLK_PIN,
+        .quadwp_io_num = -1,
+        .quadhd_io_num = -1};
+
+    ESP_LOGI(TAG, "... Initializing bus; host=%d", HSPI_HOST);
 
     esp_err_t errRc = spi_bus_initialize(
-        m_host,
-        &bus_config,
+        HSPI_HOST,
+        &buscfg,
         1 // DMA Channel
         );
 
@@ -251,23 +262,40 @@ void _dm_spiInit()
         abort();
     }
 
-    spi_device_interface_config_t dev_config;
-    dev_config.address_bits = 0;
-    dev_config.command_bits = 0;
-    dev_config.dummy_bits = 0;
-    dev_config.mode = 0;
-    dev_config.duty_cycle_pos = 0;
-    dev_config.cs_ena_posttrans = 0;
-    dev_config.cs_ena_pretrans = 0;
-    dev_config.clock_speed_hz = 100000;
-    dev_config.spics_io_num = SPI_CS_PIN;
-    dev_config.flags = 0;
-    dev_config.queue_size = 1;
-    dev_config.pre_cb = NULL;
-    dev_config.post_cb = NULL;
+    // spi_device_interface_config_t dev_config;
+    // dev_config.address_bits = 0;
+    // dev_config.command_bits = 0;
+    // dev_config.dummy_bits = 0;
+    // dev_config.mode = 0;
+    // dev_config.duty_cycle_pos = 0;
+    // dev_config.cs_ena_posttrans = 0;
+    // dev_config.cs_ena_pretrans = 0;
+    // dev_config.clock_speed_hz = 100000;
+    // dev_config.spics_io_num = SPI_CS_PIN;
+    // dev_config.flags = 0;
+    // dev_config.queue_size = 1;
+    // dev_config.pre_cb = NULL;
+    // dev_config.post_cb = NULL;
+
+    //Configuration for the SPI device on the other side of the bus
+    spi_device_interface_config_t dev_config = {
+        .address_bits = 0,
+        .command_bits = 0,
+        .dummy_bits = 0,
+        .mode = 0,
+        .duty_cycle_pos = 0,
+        .cs_ena_posttrans = 0,
+        .cs_ena_pretrans = 0,
+        .clock_speed_hz = 100000,
+        .spics_io_num = SPI_CS_PIN,
+        .flags = 0,
+        .queue_size = 1,
+        .pre_cb = NULL,
+        .post_cb = NULL,
+    };
 
     ESP_LOGI(TAG, "... Adding device bus.");
-    errRc = spi_bus_add_device(m_host, &dev_config, &m_handle);
+    errRc = spi_bus_add_device(HSPI_HOST, &dev_config, &m_handle);
     if (errRc != ESP_OK)
     {
         ESP_LOGE(TAG, "spi_bus_add_device(): rc=%d", errRc);

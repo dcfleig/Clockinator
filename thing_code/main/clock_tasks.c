@@ -57,7 +57,7 @@ void _ct_start_task(dm_BANK_SELECT bank, TaskFunction_t task, char *taskName)
     xTaskCreate(task, taskName, CLOCK_TASKS_STACK_DEPTH, (void *)bank, CLOCK_TASKS_PRIORITY, &task_handle_array[bank]);
     if (task_handle_array[bank] == NULL)
     {
-        ESP_LOGE(TAG, "%s creation failed", taskName)
+        ESP_LOGE(TAG, "%s creation failed", taskName);
     }
     else
     {
