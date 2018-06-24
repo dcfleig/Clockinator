@@ -109,28 +109,37 @@ void _source_router_task(void *param)
                                                                   : "RIGHT");
                 ESP_LOGI(TAG, "SourceRouterMessage dataSource: %s", message.dataSource);
 
-                if (strcasecmp(dm_getBankSource(message.bank), message.dataSource) == 0) {
+                if (strcasecmp(dm_getBankSource(message.bank), message.dataSource) == 0)
+                {
                     ESP_LOGI(TAG, "Requested %s on bank %s but it's already displaying it.", message.dataSource, message.bank == LEFT ? "LEFT" : "RIGHT");
                     continue;
                 }
 
-                if (message.dataSource[0] == '*') {
+                tt_bank_unsubscribe(message.bank);
+
+                if (message.dataSource[0] == '*')
+                {
                     if (strcasecmp(message.dataSource, "*date") == 0)
                     {
                         ESP_LOGI(TAG, "Starting date_task on %s bank", message.bank == LEFT ? "LEFT" : "RIGHT");
+
                         ct_start_date_task(message.bank);
-                    } else if (strcasecmp(message.dataSource, "*time") == 0)
+                    }
+                    else if (strcasecmp(message.dataSource, "*time") == 0)
                     {
                         ESP_LOGI(TAG, "Starting time_task on %s bank", message.bank == LEFT ? "LEFT" : "RIGHT");
                         ct_start_time_task(message.bank);
-                    } else if (strcasecmp(message.dataSource, "*nothing") == 0)
+                    }
+                    else if (strcasecmp(message.dataSource, "*nothing") == 0)
                     {
                         ESP_LOGI(TAG, "Clearing data on %s bank", message.bank == LEFT ? "LEFT" : "RIGHT");
                         ct_stop_task(message.bank);
                         tt_bank_unsubscribe(message.bank);
                         dm_clear_bank(message.bank);
                     }
-                } else {
+                }
+                else
+                {
                     ct_stop_task(message.bank);
                     dm_clear_bank(message.bank);
                     if (strlen(message.dataSource) != 0 && message.dataSource[0] != ' ' && message.dataSource[0] != '$')

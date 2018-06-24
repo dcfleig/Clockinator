@@ -39,8 +39,8 @@ extern const int MQTT_SEND_IN_PROGRESS_BIT;
 extern const int SOURCE_ROUTER_STARTED_BIT;
 extern EventGroupHandle_t app_event_group;
 extern AWS_IoT_Client mqttClient;
-extern SemaphoreHandle_t mqttMutex;
 
+static bool send_request = true;
 static TaskHandle_t task_handle;
 
 void _iot_subscribe_callback_handler(AWS_IoT_Client *pClient, char *topicName, uint16_t topicNameLen,
@@ -65,23 +65,15 @@ void _tt_topic_task(void *params)
 
     ESP_LOGI(TAG, "AWS IoT SDK Version %d.%d.%d-%s", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_TAG);
 
-    // while ((NETWORK_ATTEMPTING_RECONNECT == rc || NETWORK_RECONNECTED == rc || SUCCESS == rc))
     while (1)
     {
-        // CHECK_ERROR_CODE(esp_task_wdt_reset(), ESP_OK); //Comment this line to trigger a TWDT timeout
-        // Don't need to yield here as it supposedly happens as part of the shadow yield
-
-        // rc = aws_iot_mqtt_yield(&mqttClient, 200);
-        // while (NETWORK_ATTEMPTING_RECONNECT == rc || NETWORK_DISCONNECTED_ERROR == rc || MQTT_CLIENT_NOT_IDLE_ERROR == rc)
-        // {
-        //     rc = aws_iot_mqtt_yield(&mqttClient, 200);
-        //     // If the client is attempting to reconnect, or already waiting on a shadow update,
-        //     // we will skip the rest of the loop.
-        // }
-
         ESP_LOGD(TAG, "*** Stack remaining for task '%s' is %d bytes", pcTaskGetTaskName(NULL), uxTaskGetStackHighWaterMark(NULL));
-        vTaskDelay(1000 / portTICK_RATE_MS);
-        //tt_publish_message("test_topic/esp32", "snorgie borgies");
+        vTaskDelay(10000 / portTICK_RATE_MS);
+        if (send_request)
+        {
+            ESP_LOGD(TAG, "*** Stack remaining for task '%s' is %d bytes", pcTaskGetTaskName(NULL), uxTaskGetStackHighWaterMark(NULL));
+            tt_publish_message("weather/request", "{ \"clientId\": \"RedClockinator\"}");
+        }
     }
 
     ESP_LOGE(TAG, "An error occurred in the main loop.");
@@ -113,7 +105,6 @@ void tt_bank_subscribe(dm_BANK_SELECT bank, const char *topic)
     }
     else
     {
-
         tt_publish_message(strcat(topic, "/request"), CONFIG_AWS_EXAMPLE_THING_NAME);
     }
 }
@@ -183,14 +174,6 @@ void tt_publish_message(const char *topic, const char *message)
     ESP_LOGD(TAG, "MQTT payload: %s", message);
     ESP_LOGD(TAG, "MQTT topic: %s", topic);
     ESP_LOGD(TAG, "MQTT topic length: %d", TOPIC_LEN);
-
-    rc = aws_iot_mqtt_yield(&mqttClient, 200);
-    while (NETWORK_ATTEMPTING_RECONNECT == rc || NETWORK_DISCONNECTED_ERROR == rc || MQTT_CLIENT_NOT_IDLE_ERROR == rc)
-    {
-        rc = aws_iot_mqtt_yield(&mqttClient, 200);
-        // If the client is attempting to reconnect, or already waiting on a shadow update,
-        // we will skip the rest of the loop.
-    }
 
     rc = aws_iot_mqtt_publish(&mqttClient, topic, TOPIC_LEN, &paramsQOS0);
     if (SUCCESS != rc)

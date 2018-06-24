@@ -1,6 +1,8 @@
 #ifndef APP_CONSTANTS_H
 #define APP_CONSTANTS_H
 
+#include "freertos/event_groups.h"
+
 // #define WIFI_SSID "Home"
 // #define WIFI_PASS "davidchristianfleig"
 
@@ -18,6 +20,7 @@
 
 #define SHADOW_TASK_STACK_DEPTH 8000
 #define SHADOW_TASK_PRIORITY 5
+#define SHADOW_UPDATE_INTVL_SECS 10
 
 #define SOURCE_ROUTER_TASKS_STACK_DEPTH 3000
 #define SOURCE_ROUTER_TASKS_PRIORITY 3
@@ -29,11 +32,21 @@
 #define TWDT_TIMEOUT_S 120
 #define TASK_RESET_PERIOD_S 30
 
-#define CHECK_ERROR_CODE(returned, expected) ({                        \
-            if(returned != expected){                                  \
-                printf("TWDT ERROR\n");                                \
-                abort();                                               \
-            } \
+#define CHECK_ERROR_CODE(returned, expected) ({ \
+    if (returned != expected)                   \
+    {                                           \
+        printf("TWDT ERROR\n");                 \
+        abort();                                \
+    }                                           \
 })
+
+extern const int IP_CONNECTED_BIT;
+extern const int SNTP_CONNECTED_BIT;
+extern const int SHADOW_CONNECTED_BIT;
+extern const int SHADOW_IN_PROGRESS_BIT;
+extern const int MQTT_SEND_IN_PROGRESS_BIT;
+extern const int SOURCE_ROUTER_STARTED_BIT;
+
+extern EventGroupHandle_t app_event_group;
 
 #endif

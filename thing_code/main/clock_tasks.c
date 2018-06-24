@@ -31,24 +31,25 @@ static TaskHandle_t task_handle_array[2];
 
 static void _ct_time_task(dm_BANK_SELECT bank)
 {
+    int last_mins = 0;
+
     while (1)
     {
-        char display[5] = "";
-        tm_getLocalTimeText("%2d.%02d", display);
-        dm_setBankChars(bank, display);
+        if (last_mins != tm_getLocalTime().tm_min)
+        {
+            char display[5] = "";
+            tm_getLocalTimeText("%2d.%02d", display);
+            dm_setBankChars(bank, display);
+            last_mins = tm_getLocalTime().tm_min;
+        }
 
         ESP_LOGD(TAG, "*** Stack remaining for task '%s' is %d bytes", pcTaskGetTaskName(NULL), uxTaskGetStackHighWaterMark(NULL));
-        // CHECK_ERROR_CODE(esp_task_wdt_reset(), ESP_OK); //Comment this line to trigger a TWDT timeout
-        vTaskDelay(1000 / portTICK_RATE_MS);
+        vTaskDelay(100 / portTICK_RATE_MS);
     }
 }
 
 void _ct_start_task(dm_BANK_SELECT bank, TaskFunction_t task, char *taskName)
 {
-    //Subscribe this task to TWDT, then check if it is subscribed
-    // CHECK_ERROR_CODE(esp_task_wdt_add(NULL), ESP_OK);
-    // CHECK_ERROR_CODE(esp_task_wdt_status(NULL), ESP_OK);
-
     if (task_handle_array[bank] != NULL)
     {
         ct_stop_task(bank);
@@ -72,17 +73,19 @@ void ct_start_time_task(dm_BANK_SELECT bank)
 
 static void _ct_date_task(dm_BANK_SELECT bank)
 {
-    //Subscribe this task to TWDT, then check if it is subscribed
-    // CHECK_ERROR_CODE(esp_task_wdt_add(NULL), ESP_OK);
-    // CHECK_ERROR_CODE(esp_task_wdt_status(NULL), ESP_OK);
+    int last_day = -1;
     while (1)
     {
-        char display[5] = "";
-        tm_getLocalDateText("%2d.%d", display);
-        dm_setBankChars(bank, display);
+        if (last_day != tm_getLocalTime().tm_mday)
+        {
+            char display[5] = "";
+            tm_getLocalDateText("%2d.%d", display);
+            dm_setBankChars(bank, display);
+            last_day = tm_getLocalTime().tm_mday;
+        }
+
         ESP_LOGD(TAG, "*** Stack remaining for task '%s' is %d bytes", pcTaskGetTaskName(NULL), uxTaskGetStackHighWaterMark(NULL));
-        // CHECK_ERROR_CODE(esp_task_wdt_reset(), ESP_OK); //Comment this line to trigger a TWDT timeout
-        vTaskDelay(1000 / portTICK_RATE_MS);
+        vTaskDelay(100 / portTICK_RATE_MS);
     }
 }
 

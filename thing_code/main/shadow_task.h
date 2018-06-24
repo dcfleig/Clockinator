@@ -40,7 +40,6 @@ bool shadowUpdateInProgress;
 bool sendShadowUpdate;
 
 void start_shadow_task(void *param);
-void stop_shadow_task();
 
 void send_shadow_update();
 

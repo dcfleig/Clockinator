@@ -37,19 +37,10 @@
 #define BATTERY_ADC_PIN A13 // I35 , A1_7
 
 static const char *TAG = "shadow_task";
-
-extern const int IP_CONNECTED_BIT;
-extern const int SNTP_CONNECTED_BIT;
-extern const int SHADOW_CONNECTED_BIT;
-extern const int SHADOW_IN_PROGRESS_BIT;
-extern const int MQTT_SEND_IN_PROGRESS_BIT;
-extern const int SOURCE_ROUTER_STARTED_BIT;
-
-extern EventGroupHandle_t app_event_group;
 extern QueueHandle_t source_router_queue;
-extern SemaphoreHandle_t mqttMutex;
-
 static TaskHandle_t shadow_task_handle = NULL;
+static TimerHandle_t shadow_update_timer = NULL;
+static bool update_shadow_now = true;
 
 #define MAX_LENGTH_OF_UPDATE_JSON_BUFFER 1500
 
@@ -83,6 +74,18 @@ static const char *ROOT_CA_PATH = CONFIG_EXAMPLE_ROOT_CA_PATH;
 #error "Invalid method for loading certs"
 #endif
 
+void send_shadow_update()
+{
+    ESP_LOGI(TAG, "Update shadow flag set to true.");
+    update_shadow_now = true;
+}
+
+void vTimerCallback(TimerHandle_t pxTimer)
+{
+    ESP_LOGI(TAG, "Shadow update timer expired.");
+    send_shadow_update();
+}
+
 void ShadowUpdateStatusCallback(const char *pThingName, ShadowActions_t action, Shadow_Ack_Status_t status,
                                 const char *pReceivedJsonDocument, void *pContextData)
 {
@@ -103,9 +106,15 @@ void ShadowUpdateStatusCallback(const char *pThingName, ShadowActions_t action, 
     }
     else if (SHADOW_ACK_ACCEPTED == status)
     {
-        ESP_LOGD(TAG, "Update accepted");
+        ESP_LOGI(TAG, "Update accepted");
         xEventGroupSetBits(app_event_group, SHADOW_CONNECTED_BIT);
+        update_shadow_now = false;
+        if (xTimerStart(shadow_update_timer, 0) != pdPASS)
+        {
+            ESP_LOGE(TAG, "Unable to start shadow update timer");
+        }
     }
+
 }
 
 void sntp_hostname_Callback(const char *pJsonString, uint32_t JsonStringDataLen, jsonStruct_t *pContext)
@@ -197,7 +206,7 @@ uint32_t getBatteryVoltage()
 
     //Characterize ADC
     adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
-    esp_adc_cal_value_t val_type = esp_adc_cal_characterize(unit, atten, ADC_WIDTH_BIT_12, 1100, adc_chars);
+    esp_adc_cal_characterize(unit, atten, ADC_WIDTH_BIT_12, 1100, adc_chars);
 
     uint32_t adc_reading = 0;
     for (int i = 0; i < 64; i++)
@@ -281,6 +290,8 @@ void _shadow_task(void *param)
     scp.pMyThingName = CONFIG_AWS_EXAMPLE_THING_NAME;
     scp.pMqttClientId = CONFIG_AWS_EXAMPLE_CLIENT_ID;
     scp.mqttClientIdLen = (uint16_t)strlen(CONFIG_AWS_EXAMPLE_CLIENT_ID);
+
+    aws_iot_shadow_enable_discard_old_delta_msgs();
 
     ESP_LOGD(TAG, "Shadow Connect");
     rc = aws_iot_shadow_connect(&mqttClient, &scp);
@@ -373,15 +384,17 @@ void _shadow_task(void *param)
         ESP_LOGE(TAG, "Shadow Register brightnessHandler Delta Error");
     }
 
-    //Subscribe this task to TWDT, then check if it is subscribed
-    // CHECK_ERROR_CODE(esp_task_wdt_add(NULL), ESP_OK);
-    // CHECK_ERROR_CODE(esp_task_wdt_status(NULL), ESP_OK);
+    // Since everything's good up to this point, start the shadow update timer
+    shadow_update_timer = xTimerCreate("shadow_update_timer",                                // Just a text name, not used by the kernel.
+                                       (SHADOW_UPDATE_INTVL_SECS * 1000) / portTICK_RATE_MS, // The timer period in ticks.
+                                       pdTRUE,                                               // The timers will auto-reload themselves when they expire.
+                                       1,                                                    // Assign each timer a unique id equal to its array index.
+                                       vTimerCallback                                        // Each timer calls the same callback when it expires.
+                                       );
 
     while (1)
     {
-        // CHECK_ERROR_CODE(esp_task_wdt_reset(), ESP_OK); //Comment this line to trigger a TWDT timeout
-
-        rc = aws_iot_shadow_yield(&mqttClient, 200);
+        rc = aws_iot_shadow_yield(&mqttClient, 2000);
         if (NETWORK_ATTEMPTING_RECONNECT == rc || shadowUpdateInProgress)
         {
             rc = aws_iot_shadow_yield(&mqttClient, 1000);
@@ -398,34 +411,35 @@ void _shadow_task(void *param)
             ESP_LOGE(TAG, "An error occurred in the loop %d", rc);
         }
 
-        ESP_LOGD(TAG, "Building shadow update json");
-        rc = aws_iot_shadow_init_json_document(JsonDocumentBuffer, sizeOfJsonDocumentBuffer);
-        if (SUCCESS == rc)
+        if (update_shadow_now)
         {
-            rc = aws_iot_shadow_add_reported(JsonDocumentBuffer, sizeOfJsonDocumentBuffer, 7,
-                                             &sntpHandler,
-                                             &timezoneHandler,
-                                             &leftSourceSlotHandler,
-                                             &rightSourceSlotHandler,
-                                             &brightnessHandler,
-                                             &localtimeHandler,
-                                             &batteryHandler);
+            ESP_LOGD(TAG, "Building shadow update json");
+            rc = aws_iot_shadow_init_json_document(JsonDocumentBuffer, sizeOfJsonDocumentBuffer);
             if (SUCCESS == rc)
             {
-                rc = aws_iot_finalize_json_document(JsonDocumentBuffer, sizeOfJsonDocumentBuffer);
+                rc = aws_iot_shadow_add_reported(JsonDocumentBuffer, sizeOfJsonDocumentBuffer, 7,
+                                                 &sntpHandler,
+                                                 &timezoneHandler,
+                                                 &leftSourceSlotHandler,
+                                                 &rightSourceSlotHandler,
+                                                 &brightnessHandler,
+                                                 &localtimeHandler,
+                                                 &batteryHandler);
                 if (SUCCESS == rc)
                 {
-                    ESP_LOGD(TAG, "Updating Shadow: %s", JsonDocumentBuffer);
-                    rc = aws_iot_shadow_update(&mqttClient, CONFIG_AWS_EXAMPLE_THING_NAME, JsonDocumentBuffer,
-                                               ShadowUpdateStatusCallback, NULL, 5, true);
-                    shadowUpdateInProgress = true;
+                    rc = aws_iot_finalize_json_document(JsonDocumentBuffer, sizeOfJsonDocumentBuffer);
+                    if (SUCCESS == rc)
+                    {
+                        ESP_LOGD(TAG, "Updating Shadow: %s", JsonDocumentBuffer);
+                        rc = aws_iot_shadow_update(&mqttClient, CONFIG_AWS_EXAMPLE_THING_NAME, JsonDocumentBuffer,
+                                                   ShadowUpdateStatusCallback, NULL, 5, true);
+                        shadowUpdateInProgress = true;
+                    }
+                    update_shadow_now = false;
                 }
             }
         }
-
         ESP_LOGD(TAG, "*** Stack remaining for task '%s' is %d bytes", pcTaskGetTaskName(NULL), uxTaskGetStackHighWaterMark(NULL));
-
-        vTaskDelay(1000 / portTICK_RATE_MS);
     }
 
     ESP_LOGD(TAG, "Disconnecting");
@@ -454,23 +468,4 @@ void start_shadow_task(void *param)
     {
         ESP_LOGD(TAG, "Was going to start _shadow_task but it's already running");
     }
-}
-
-void stop_shadow_task()
-{
-    IoT_Error_t rc = FAILURE;
-    ESP_LOGD(TAG, "Stopping _shadow_task...");
-
-    // esp_task_wdt_delete(shadow_task_handle);
-
-    ESP_LOGI(TAG, "Disconnecting");
-    rc = aws_iot_shadow_disconnect(&mqttClient);
-
-    vTaskDelete(shadow_task_handle);
-    while (shadow_task_handle != NULL)
-    {
-        vTaskDelay(100 / portTICK_RATE_MS);
-    }
-    vTaskDelete(shadow_task_handle);
-    ESP_LOGD(TAG, "_shadow_task stopped");
 }

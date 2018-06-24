@@ -121,14 +121,14 @@ void app_main()
 
     start_source_router_task(NULL);
 
+    tm_init();
+
     start_shadow_task(NULL);
 
     ESP_LOGI(TAG, "Wait for the shadow task to start in case it needs to change the config");
     /* Wait for WiFI to show as connected */
     xEventGroupWaitBits(app_event_group, SHADOW_CONNECTED_BIT,
                         false, true, portMAX_DELAY);
-
-    tm_init();
 
     tt_start_topic_task(NULL);
 }
